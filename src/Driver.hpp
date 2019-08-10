@@ -12,6 +12,8 @@ namespace gps_ublox
             uint8_t mWriteBuffer[BUFFER_SIZE];
             uint8_t mReadBuffer[BUFFER_SIZE];
 
+        protected:
+            int extractPacket(const uint8_t *buffer, size_t buffer_size) const override;
         public:
             Driver();
     };
