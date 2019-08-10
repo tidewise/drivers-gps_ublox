@@ -1,0 +1,12 @@
+<package>
+  <description brief="Driver library for u-blox GPS modules">
+  Driver library for u-blox GPS modules
+  </description>
+  <author>Gabriel Arjones/arjones@arjones.com</author>
+  <license></license>
+  <url>http://</url>
+  <logo>http://</logo>
+  <depend package="base/cmake" />
+  <depend package="drivers/iodrivers_base" />
+  <test_depend package="google-test" />
+</package>
