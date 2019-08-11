@@ -33,12 +33,15 @@ namespace gps_ublox
                 /** The message class enumeration
                  */
                 enum MsgClass {
+                    UBX_ACK = 0x05,
                     UBX_CFG = 0x06
                 };
 
                 /** The message id enumeration
                  */
                 enum MsgId {
+                    NACK = 0x00,
+                    ACK = 0x01,
                     VALSET = 0x8A
                 };
 
@@ -60,7 +63,35 @@ namespace gps_ublox
                     I2C_INPROT_RTCM3X = 0x10710004,
                     I2C_OUTPROT_UBX = 0x10720001,
                     I2C_OUTPROT_NMEA = 0x10720002,
-                    I2C_OUTPROT_RTCM3X = 0x10720004
+                    I2C_OUTPROT_RTCM3X = 0x10720004,
+                    SPI_ENABLED = 0x10640006,
+                    SPI_INPROT_UBX = 0x10790001,
+                    SPI_INPROT_NMEA = 0x10790002,
+                    SPI_INPROT_RTCM3X = 0x10790004,
+                    SPI_OUTPROT_UBX = 0x107a0001,
+                    SPI_OUTPROT_NMEA = 0x107a0002,
+                    SPI_OUTPROT_RTCM3X = 0x107a0004,
+                    UART1_ENABLED = 0x10520005,
+                    UART1_INPROT_UBX = 0x10730001,
+                    UART1_INPROT_NMEA = 0x10730002,
+                    UART1_INPROT_RTCM3X = 0x10730004,
+                    UART1_OUTPROT_UBX = 0x10740001,
+                    UART1_OUTPROT_NMEA = 0x10740002,
+                    UART1_OUTPROT_RTCM3X = 0x10740004,
+                    UART2_ENABLED = 0x10530005,
+                    UART2_INPROT_UBX = 0x10750001,
+                    UART2_INPROT_NMEA = 0x10750002,
+                    UART2_INPROT_RTCM3X = 0x10750004,
+                    UART2_OUTPROT_UBX = 0x10760001,
+                    UART2_OUTPROT_NMEA = 0x10760002,
+                    UART2_OUTPROT_RTCM3X = 0x10760004,
+                    USB_ENABLED = 0x10650001,
+                    USB_INPROT_UBX = 0x10770001,
+                    USB_INPROT_NMEA = 0x10770002,
+                    USB_INPROT_RTCM3X = 0x10770004,
+                    USB_OUTPROT_UBX = 0x10780001,
+                    USB_OUTPROT_NMEA = 0x10780002,
+                    USB_OUTPROT_RTCM3X = 0x10780004
                 };
 
                 /** Represents an UBX binary data frame
