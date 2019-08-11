@@ -87,3 +87,44 @@ vector<uint8_t> UBX::checksum(const uint8_t *buffer, const uint8_t *end) {
     }
     return vector<uint8_t>{ck_a, ck_b};
 }
+
+template<typename T>
+static T fromLittleEndian(const uint8_t *buffer)
+{
+    T result = 0;
+    uint8_t shifter = 0;
+    for (size_t i = 0; i < sizeof(T); i++) {
+        result |= static_cast<T>(buffer[i]) << shifter;
+        shifter += 8;
+    }
+    return reinterpret_cast<T const&>(result);
+}
+
+template<typename T>
+void toLittleEndian(vector<uint8_t> &buffer, T value)
+{
+    uint8_t shifter = 0;
+    T bytes = reinterpret_cast<const T&>(value);
+    for (size_t i = 0; i < sizeof(T); i++) {
+        buffer.push_back((bytes >> shifter) & 0xFF);
+        shifter += 8;
+    }
+}
+
+vector<uint8_t> UBX::getCfgValSetPacket(ConfigurationKeyId key_id,
+                                        bool value,
+                                        bool persist) const
+{
+    Frame frame;
+    frame.msg_class = UBX_CFG;
+    frame.msg_id = VALSET;
+
+    frame.payload.push_back(0);
+    frame.payload.push_back(persist ? LAYER_ALL :  LAYER_RAM);
+    frame.payload.push_back(0);
+    frame.payload.push_back(0);
+    toLittleEndian<uint32_t>(frame.payload, key_id);
+    frame.payload.push_back(value);
+
+    return frame.toPacket();
+}
