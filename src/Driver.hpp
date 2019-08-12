@@ -9,7 +9,7 @@ namespace gps_ublox
 {
     /** Thrown when a UBX-CFG-VALSET command fails
      */
-    struct ConfigValSetFailed : public std::runtime_error {
+    struct ConfigValueSetError : public std::runtime_error {
         using std::runtime_error::runtime_error;
     };
 
@@ -22,7 +22,7 @@ namespace gps_ublox
             protocols::UBX mUBXParser;
 
             bool waitForAck(uint8_t class_id, uint8_t msg_id);
-            void setCfgKeyValue(protocols::UBX::ConfigurationKeyId key_id, bool state, bool persist);
+            void setConfigKeyValue(protocols::UBX::ConfigKeyId key_id, bool state, bool persist);
 
         protected:
             /** Implements iodrivers_base's extractPacket protocol
@@ -67,8 +67,8 @@ namespace gps_ublox
              * @param state True if the protocol is to be enabled
              * @param persis Wheter the configuration should be persisted
              */
-            void setPortInProt(DevicePort port, DeviceProtocol protocol, bool state, bool persist = true);
-            void setPortOutProt(DevicePort port, DeviceProtocol protocol, bool state, bool persist = true);
+            void setInputProtocol(DevicePort port, DeviceProtocol protocol, bool state, bool persist = true);
+            void setOutputProtocol(DevicePort port, DeviceProtocol protocol, bool state, bool persist = true);
     };
 
 } // end namespace gps_ublox

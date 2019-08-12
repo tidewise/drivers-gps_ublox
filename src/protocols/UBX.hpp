@@ -34,21 +34,21 @@ namespace gps_ublox
                 /** The message class enumeration
                  */
                 enum MsgClass {
-                    UBX_ACK = 0x05,
-                    UBX_CFG = 0x06
+                    MSG_CLASS_ACK = 0x05,
+                    MSG_CLASS_CFG = 0x06
                 };
 
                 /** The message id enumeration
                  */
                 enum MsgId {
-                    NACK = 0x00,
-                    ACK = 0x01,
-                    VALSET = 0x8A
+                    MSG_ID_NACK = 0x00,
+                    MSG_ID_ACK = 0x01,
+                    MSG_ID_VALSET = 0x8A
                 };
 
                 /** The layer where a configuration data is stored
                  */
-                enum ConfigurationLayer {
+                enum ConfigLayer {
                     LAYER_RAM = 1,
                     LAYER_BBR = 2,
                     LAYER_FLASH = 4,
@@ -57,42 +57,42 @@ namespace gps_ublox
 
                 /** The unique key id of a configuration value
                  */
-                enum ConfigurationKeyId {
+                enum ConfigKeyId {
                     I2C_ENABLED = 0x10510003,
-                    I2C_INPROT_UBX = 0x10710001,
-                    I2C_INPROT_NMEA = 0x10710002,
-                    I2C_INPROT_RTCM3X = 0x10710004,
-                    I2C_OUTPROT_UBX = 0x10720001,
-                    I2C_OUTPROT_NMEA = 0x10720002,
-                    I2C_OUTPROT_RTCM3X = 0x10720004,
+                    I2C_IN_UBX = 0x10710001,
+                    I2C_IN_NMEA = 0x10710002,
+                    I2C_IN_RTCM3X = 0x10710004,
+                    I2C_OUT_UBX = 0x10720001,
+                    I2C_OUT_NMEA = 0x10720002,
+                    I2C_OUT_RTCM3X = 0x10720004,
                     SPI_ENABLED = 0x10640006,
-                    SPI_INPROT_UBX = 0x10790001,
-                    SPI_INPROT_NMEA = 0x10790002,
-                    SPI_INPROT_RTCM3X = 0x10790004,
-                    SPI_OUTPROT_UBX = 0x107a0001,
-                    SPI_OUTPROT_NMEA = 0x107a0002,
-                    SPI_OUTPROT_RTCM3X = 0x107a0004,
+                    SPI_IN_UBX = 0x10790001,
+                    SPI_IN_NMEA = 0x10790002,
+                    SPI_IN_RTCM3X = 0x10790004,
+                    SPI_OUT_UBX = 0x107a0001,
+                    SPI_OUT_NMEA = 0x107a0002,
+                    SPI_OUT_RTCM3X = 0x107a0004,
                     UART1_ENABLED = 0x10520005,
-                    UART1_INPROT_UBX = 0x10730001,
-                    UART1_INPROT_NMEA = 0x10730002,
-                    UART1_INPROT_RTCM3X = 0x10730004,
-                    UART1_OUTPROT_UBX = 0x10740001,
-                    UART1_OUTPROT_NMEA = 0x10740002,
-                    UART1_OUTPROT_RTCM3X = 0x10740004,
+                    UART1_IN_UBX = 0x10730001,
+                    UART1_IN_NMEA = 0x10730002,
+                    UART1_IN_RTCM3X = 0x10730004,
+                    UART1_OUT_UBX = 0x10740001,
+                    UART1_OUT_NMEA = 0x10740002,
+                    UART1_OUT_RTCM3X = 0x10740004,
                     UART2_ENABLED = 0x10530005,
-                    UART2_INPROT_UBX = 0x10750001,
-                    UART2_INPROT_NMEA = 0x10750002,
-                    UART2_INPROT_RTCM3X = 0x10750004,
-                    UART2_OUTPROT_UBX = 0x10760001,
-                    UART2_OUTPROT_NMEA = 0x10760002,
-                    UART2_OUTPROT_RTCM3X = 0x10760004,
+                    UART2_IN_UBX = 0x10750001,
+                    UART2_IN_NMEA = 0x10750002,
+                    UART2_IN_RTCM3X = 0x10750004,
+                    UART2_OUT_UBX = 0x10760001,
+                    UART2_OUT_NMEA = 0x10760002,
+                    UART2_OUT_RTCM3X = 0x10760004,
                     USB_ENABLED = 0x10650001,
-                    USB_INPROT_UBX = 0x10770001,
-                    USB_INPROT_NMEA = 0x10770002,
-                    USB_INPROT_RTCM3X = 0x10770004,
-                    USB_OUTPROT_UBX = 0x10780001,
-                    USB_OUTPROT_NMEA = 0x10780002,
-                    USB_OUTPROT_RTCM3X = 0x10780004
+                    USB_IN_UBX = 0x10770001,
+                    USB_IN_NMEA = 0x10770002,
+                    USB_IN_RTCM3X = 0x10770004,
+                    USB_OUT_UBX = 0x10780001,
+                    USB_OUT_NMEA = 0x10780002,
+                    USB_OUT_RTCM3X = 0x10780004
                 };
 
                 /** Represents an UBX binary data frame
@@ -126,9 +126,9 @@ namespace gps_ublox
 
                 /** Serializes a packet with a UBX-CFG-VALSET message
                  */
-                std::vector<uint8_t> getCfgValSetPacket(ConfigurationKeyId key_id,
-                                                        bool value,
-                                                        bool persist = true) const;
+                std::vector<uint8_t> getConfigValueSetPacket(ConfigKeyId key_id,
+                                                             bool value,
+                                                             bool persist = true) const;
         };
     } // end namespace protocols
 } // end namespace gps_ublox

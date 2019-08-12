@@ -86,8 +86,8 @@ TEST_F(UBXTest, it_serializes_a_frame) {
 }
 
 TEST_F(UBXTest, it_returns_a_valset_all_layers_packet) {
-    vector<uint8_t> packet = ubx.getCfgValSetPacket(UBX::I2C_ENABLED, true);
-    buffer = { UBX::SYNC_1, UBX::SYNC_2, UBX::UBX_CFG, UBX::VALSET, 0x09, 0x00,
+    vector<uint8_t> packet = ubx.getConfigValueSetPacket(UBX::I2C_ENABLED, true);
+    buffer = { UBX::SYNC_1, UBX::SYNC_2, UBX::MSG_CLASS_CFG, UBX::MSG_ID_VALSET, 0x09, 0x00,
                0x00, UBX::LAYER_ALL, 0x00, 0x00, 0x03, 0x00, 0x51, 0x10, 0x01 };
 
     insertChecksum(buffer);
@@ -95,8 +95,8 @@ TEST_F(UBXTest, it_returns_a_valset_all_layers_packet) {
 }
 
 TEST_F(UBXTest, it_returns_a_valset_ram_layer_packet) {
-    vector<uint8_t> packet = ubx.getCfgValSetPacket(UBX::I2C_ENABLED, false, false);
-    buffer = { UBX::SYNC_1, UBX::SYNC_2, UBX::UBX_CFG, UBX::VALSET, 0x09, 0x00,
+    vector<uint8_t> packet = ubx.getConfigValueSetPacket(UBX::I2C_ENABLED, false, false);
+    buffer = { UBX::SYNC_1, UBX::SYNC_2, UBX::MSG_CLASS_CFG, UBX::MSG_ID_VALSET, 0x09, 0x00,
                0x00, UBX::LAYER_RAM, 0x00, 0x00, 0x03, 0x00, 0x51, 0x10, 0x00 };
 
     insertChecksum(buffer);

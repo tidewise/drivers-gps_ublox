@@ -72,7 +72,7 @@ int UBX::extractPacket(const uint8_t *buffer, size_t buffer_size) const
     // checksum is calculated over the message, starting from and including the
     // MSG_CLASS field up until, but excluding, the checksum field
     array<uint8_t, 2> ck = checksum(&buffer[MSG_CLASS_IDX],
-                                  &buffer[PAYLOAD_IDX + payload_size]);
+                                    &buffer[PAYLOAD_IDX + payload_size]);
 
     if (ck[0] != ck_a || ck[1] != ck_b)
         return -1;
@@ -112,16 +112,16 @@ void toLittleEndian(vector<uint8_t> &buffer, T value)
     }
 }
 
-vector<uint8_t> UBX::getCfgValSetPacket(ConfigurationKeyId key_id,
-                                        bool value,
-                                        bool persist) const
+vector<uint8_t> UBX::getConfigValueSetPacket(ConfigKeyId key_id,
+                                             bool value,
+                                             bool persist) const
 {
     Frame frame;
-    frame.msg_class = UBX_CFG;
-    frame.msg_id = VALSET;
+    frame.msg_class = MSG_CLASS_CFG;
+    frame.msg_id = MSG_ID_VALSET;
 
     frame.payload.push_back(0);
-    frame.payload.push_back(persist ? LAYER_ALL :  LAYER_RAM);
+    frame.payload.push_back(persist ? LAYER_ALL : LAYER_RAM);
     frame.payload.push_back(0);
     frame.payload.push_back(0);
     toLittleEndian<uint32_t>(frame.payload, key_id);
