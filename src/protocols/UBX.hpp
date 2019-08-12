@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <array>
 #include <vector>
 
 #include <gps_ublox/protocols/Parser.hpp>
@@ -16,7 +17,7 @@ namespace gps_ublox
             private:
                 /** Computes the 2-byte checksum over the given buffer
                  */
-                static std::vector<uint8_t> checksum(const uint8_t *buffer, const uint8_t *end);
+                static std::array<uint8_t, 2> checksum(const uint8_t *buffer, const uint8_t *end);
 
             public:
                 static const uint8_t SYNC_1;

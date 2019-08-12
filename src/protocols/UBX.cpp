@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <array>
 #include <vector>
 
 #include <gps_ublox/protocols/UBX.hpp>
@@ -43,7 +44,7 @@ vector<uint8_t> UBX::Frame::toPacket() const
     packet.push_back((this->payload.size() & 0xFF00) >> 8);
     packet.insert(packet.end(), this->payload.begin(), this->payload.end());
 
-    vector<uint8_t> ck = UBX::checksum(&packet[MSG_CLASS_IDX], &packet[0] + packet.size());
+    array<uint8_t, 2> ck = UBX::checksum(&packet[MSG_CLASS_IDX], &packet[0] + packet.size());
 
     packet.push_back(ck[0]);
     packet.push_back(ck[1]);
@@ -70,7 +71,7 @@ int UBX::extractPacket(const uint8_t *buffer, size_t buffer_size) const
 
     // checksum is calculated over the message, starting from and including the
     // MSG_CLASS field up until, but excluding, the checksum field
-    vector<uint8_t> ck = checksum(&buffer[MSG_CLASS_IDX],
+    array<uint8_t, 2> ck = checksum(&buffer[MSG_CLASS_IDX],
                                   &buffer[PAYLOAD_IDX + payload_size]);
 
     if (ck[0] != ck_a || ck[1] != ck_b)
@@ -79,13 +80,13 @@ int UBX::extractPacket(const uint8_t *buffer, size_t buffer_size) const
     return packet_size;
 }
 
-vector<uint8_t> UBX::checksum(const uint8_t *buffer, const uint8_t *end) {
+array<uint8_t, 2> UBX::checksum(const uint8_t *buffer, const uint8_t *end) {
     uint8_t ck_a, ck_b = 0;
     while (buffer != end) {
         ck_a += *buffer++;
         ck_b += ck_a;
     }
-    return vector<uint8_t>{ck_a, ck_b};
+    return array<uint8_t, 2>{ck_a, ck_b};
 }
 
 template<typename T>
