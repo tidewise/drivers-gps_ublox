@@ -23,26 +23,30 @@ const size_t UBX::FRAMING_SIZE_OVERHEAD = 8;
 
 UBX::Frame UBX::Frame::fromPacket(const uint8_t *buffer, size_t size)
 {
-    Frame frame;
-    frame.msg_class = buffer[MSG_CLASS_IDX];
-    frame.msg_id = buffer[MSG_ID_IDX];
+    uint16_t payload_size = buffer[LENGTH_LSB_IDX] |
+                            (buffer[LENGTH_MSB_IDX] << 8);
 
-    uint16_t payload_size = buffer[LENGTH_LSB_IDX] | (buffer[LENGTH_MSB_IDX] << 8);
-    frame.payload = vector<uint8_t>(&buffer[PAYLOAD_IDX], &buffer[PAYLOAD_IDX] + payload_size);
-
+    Frame frame = {
+        .msg_class = buffer[MSG_CLASS_IDX],
+        .msg_id = buffer[MSG_ID_IDX],
+        .payload = vector<uint8_t>(&buffer[PAYLOAD_IDX],
+                                   &buffer[PAYLOAD_IDX] + payload_size)
+    };
     return frame;
 }
 
 vector<uint8_t> UBX::Frame::toPacket() const
 {
-    vector<uint8_t> packet;
-    packet.push_back(SYNC_1);
-    packet.push_back(SYNC_2);
-    packet.push_back(this->msg_class);
-    packet.push_back(this->msg_id);
-    packet.push_back(this->payload.size() & 0x00FF);
-    packet.push_back((this->payload.size() & 0xFF00) >> 8);
-    packet.insert(packet.end(), this->payload.begin(), this->payload.end());
+    vector<uint8_t> packet = {
+        SYNC_1,
+        SYNC_2,
+        msg_class,
+        msg_id
+    };
+
+    packet.push_back(payload.size() & 0x00FF);
+    packet.push_back((payload.size() & 0xFF00) >> 8);
+    packet.insert(packet.end(), payload.begin(), payload.end());
 
     array<uint8_t, 2> ck = UBX::checksum(&packet[MSG_CLASS_IDX], &packet[0] + packet.size());
 
