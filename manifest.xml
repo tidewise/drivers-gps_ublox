@@ -1,9 +1,12 @@
 <package>
   <description brief="Driver library for u-blox GPS modules">
-  Driver library for u-blox GPS modules
+    Driver library for u-blox GPS modules
   </description>
-  <author>Gabriel Arjones/arjones@arjones.com</author>
-  <license></license>
+  <author>Gabriel Arjones/gabriel.arjones@tidewise.io</author>
+  <license>3-clause BSD</license>
+  <copyright>
+    TideWise
+  </copyright>
   <url>http://</url>
   <logo>http://</logo>
   <depend package="base/cmake" />
