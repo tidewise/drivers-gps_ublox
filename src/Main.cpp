@@ -95,7 +95,7 @@ int main(int argc, char** argv)
             printPorts();
             return 1;
         }
-    } if ((cmd == "enable-input") || (cmd == "enable-output")) {
+    } else if ((cmd == "enable-input") || (cmd == "enable-output")) {
         bool input = cmd == "enable-input";
 
         if (argc == 3) {
