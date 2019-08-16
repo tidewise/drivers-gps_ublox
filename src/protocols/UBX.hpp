@@ -126,9 +126,10 @@ namespace gps_ublox
 
                 /** Serializes a packet with a UBX-CFG-VALSET message
                  */
+                template<typename T>
                 std::vector<uint8_t> getConfigValueSetPacket(ConfigKeyId key_id,
-                                                             bool value,
-                                                             bool persist = true) const;
+                                                             T value,
+                                                             bool persist = false) const;
         };
     } // end namespace protocols
 } // end namespace gps_ublox

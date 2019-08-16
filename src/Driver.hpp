@@ -22,7 +22,6 @@ namespace gps_ublox
             protocols::UBX mUBXParser;
 
             bool waitForAck(uint8_t class_id, uint8_t msg_id);
-            void setConfigKeyValue(protocols::UBX::ConfigKeyId key_id, bool state, bool persist);
 
         protected:
             /** Implements iodrivers_base's extractPacket protocol
@@ -32,6 +31,9 @@ namespace gps_ublox
             int extractPacket(const uint8_t *buffer, size_t buffer_size) const override;
 
         public:
+            template<typename T>
+            void setConfigKeyValue(protocols::UBX::ConfigKeyId key_id, T state, bool persist = false);
+
             /** Identifies the device's ports
              */
             enum DevicePort {

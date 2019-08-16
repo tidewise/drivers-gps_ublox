@@ -37,15 +37,20 @@ bool Driver::waitForAck(uint8_t class_id, uint8_t msg_id)
         "Did not receive an acknowledgement within the expected timeout");
 }
 
-void Driver::setConfigKeyValue(UBX::ConfigKeyId key_id, bool state, bool persist)
+template<typename T>
+void Driver::setConfigKeyValue(protocols::UBX::ConfigKeyId key_id, T value, bool persist)
 {
-    vector<uint8_t> packet = mUBXParser.getConfigValueSetPacket(key_id, state, persist);
+    vector<uint8_t> packet = mUBXParser.getConfigValueSetPacket<T>(key_id, value, persist);
     writePacket(&packet[0], packet.size());
 
     if (!waitForAck(UBX::MSG_CLASS_CFG, UBX::MSG_ID_VALSET)) {
         throw ConfigValueSetError("Configuration rejected by the device");
     }
 }
+
+template void Driver::setConfigKeyValue<bool>(protocols::UBX::ConfigKeyId, bool, bool);
+template void Driver::setConfigKeyValue<uint8_t>(protocols::UBX::ConfigKeyId, uint8_t, bool);
+template void Driver::setConfigKeyValue<uint16_t>(protocols::UBX::ConfigKeyId, uint16_t, bool);
 
 void Driver::setPortEnabled(DevicePort port, bool state, bool persist)
 {
