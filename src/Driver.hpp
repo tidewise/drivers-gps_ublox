@@ -3,6 +3,7 @@
 
 #include <iodrivers_base/Driver.hpp>
 #include <gps_ublox/protocols/UBX.hpp>
+#include <gps_ublox/BoardInfo.hpp>
 #include <stdexcept>
 
 namespace gps_ublox
@@ -21,6 +22,8 @@ namespace gps_ublox
             uint8_t mReadBuffer[BUFFER_SIZE];
             protocols::UBX mUBXParser;
 
+            protocols::UBX::Frame pollFrame(uint8_t class_id, uint8_t msg_id);
+            protocols::UBX::Frame waitForFrame(uint8_t class_id, uint8_t msg_id);
             bool waitForAck(uint8_t class_id, uint8_t msg_id);
 
         protected:
@@ -71,6 +74,8 @@ namespace gps_ublox
              */
             void setInputProtocol(DevicePort port, DeviceProtocol protocol, bool state, bool persist = true);
             void setOutputProtocol(DevicePort port, DeviceProtocol protocol, bool state, bool persist = true);
+
+            BoardInfo readBoardInfo();
     };
 
 } // end namespace gps_ublox

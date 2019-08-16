@@ -35,7 +35,8 @@ namespace gps_ublox
                  */
                 enum MsgClass {
                     MSG_CLASS_ACK = 0x05,
-                    MSG_CLASS_CFG = 0x06
+                    MSG_CLASS_CFG = 0x06,
+                    MSG_CLASS_MON = 0x0A
                 };
 
                 /** The message id enumeration
@@ -43,7 +44,8 @@ namespace gps_ublox
                 enum MsgId {
                     MSG_ID_NACK = 0x00,
                     MSG_ID_ACK = 0x01,
-                    MSG_ID_VALSET = 0x8A
+                    MSG_ID_VALSET = 0x8A,
+                    MSG_ID_VER = 0x04
                 };
 
                 /** The layer where a configuration data is stored

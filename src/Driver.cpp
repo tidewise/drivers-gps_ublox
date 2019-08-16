@@ -16,6 +16,47 @@ int Driver::extractPacket(const uint8_t *buffer, size_t buffer_size) const
     return mUBXParser.extractPacket(buffer, buffer_size);
 }
 
+BoardInfo Driver::readBoardInfo() {
+    auto frame = pollFrame(UBX::MSG_CLASS_MON, UBX::MSG_ID_VER);
+
+    BoardInfo info;
+    info.software_version = string(reinterpret_cast<char*>(&frame.payload[0]));
+    info.hardware_version = string(reinterpret_cast<char*>(&frame.payload[30]));
+
+    for (size_t i = 40; i < frame.payload.size(); i += 30) {
+        info.extensions.push_back(string(reinterpret_cast<char*>(&frame.payload[i])));
+    }
+    return info;
+}
+
+UBX::Frame Driver::pollFrame(uint8_t class_id, uint8_t msg_id)
+{
+    UBX::Frame frame = {
+        .msg_class = class_id,
+        .msg_id    = msg_id
+    };
+    vector<uint8_t> packet = frame.toPacket();
+    writePacket(&packet[0], packet.size());
+    return waitForFrame(class_id, msg_id);
+}
+
+UBX::Frame Driver::waitForFrame(uint8_t class_id, uint8_t msg_id)
+{
+    base::Time deadline = base::Time::now() + getReadTimeout();
+    while (base::Time::now() < deadline) {
+        base::Time remaining = deadline - base::Time::now();
+        int bytes = readPacket(mReadBuffer, BUFFER_SIZE, remaining);
+
+        UBX::Frame frame = UBX::Frame::fromPacket(mReadBuffer, bytes);
+        if (frame.msg_class == class_id && frame.msg_id == msg_id)
+            return frame;
+    }
+
+    throw iodrivers_base::TimeoutError(
+        iodrivers_base::TimeoutError::PACKET,
+        "Did not receive an acknowledgement within the expected timeout");
+}
+
 bool Driver::waitForAck(uint8_t class_id, uint8_t msg_id)
 {
     base::Time deadline = base::Time::now() + getReadTimeout();
@@ -128,4 +169,3 @@ void Driver::setOutputProtocol(DevicePort port, DeviceProtocol protocol, bool st
     }
     setConfigKeyValue(key_id, state, persist);
 }
-
