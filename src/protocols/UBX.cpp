@@ -136,6 +136,9 @@ std::vector<uint8_t> UBX::getConfigValueSetPacket(ConfigKeyId key_id,
     return frame.toPacket();
 }
 
+namespace gps_ublox {
+namespace protocols {
+
 template vector<uint8_t> UBX::getConfigValueSetPacket(ConfigKeyId, uint8_t, bool) const;
 template vector<uint8_t> UBX::getConfigValueSetPacket(ConfigKeyId, uint16_t, bool) const;
 
@@ -144,6 +147,8 @@ std::vector<uint8_t> UBX::getConfigValueSetPacket<bool>(ConfigKeyId key_id,
                                                         bool value,
                                                         bool persist) const
 {
-    return getConfigValueSetPacket<uint8_t>(
-        key_id, value ? 1 : 0, persist);
+    return getConfigValueSetPacket<uint8_t>(key_id, value ? 1 : 0, persist);
+}
+
+}
 }
