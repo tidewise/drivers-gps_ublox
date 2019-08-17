@@ -94,7 +94,16 @@ namespace gps_ublox
                     USB_IN_RTCM3X = 0x10770004,
                     USB_OUT_UBX = 0x10780001,
                     USB_OUT_NMEA = 0x10780002,
-                    USB_OUT_RTCM3X = 0x10780004
+                    USB_OUT_RTCM3X = 0x10780004,
+                    ODO_USE_ODO = 0x10220001,
+                    ODO_USE_COG = 0x10220002,
+                    ODO_OUTLPVEL = 0x10220003,
+                    ODO_OUTLPCOG = 0x10220004,
+                    ODO_PROFILE = 0x20220005,
+                    ODO_COGMAXSPEED = 0x20220021,
+                    ODO_COGMAXPOSACC = 0x20220022,
+                    ODO_VELLPGAIN = 0x20220031,
+                    ODO_COGLPGAIN = 0x20220032
                 };
 
                 /** Represents an UBX binary data frame

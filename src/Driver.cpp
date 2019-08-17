@@ -169,3 +169,48 @@ void Driver::setOutputProtocol(DevicePort port, DeviceProtocol protocol, bool st
     }
     setConfigKeyValue(key_id, state, persist);
 }
+
+void Driver::setOdometer(bool state, bool persist)
+{
+    setConfigKeyValue(UBX::ODO_USE_ODO, state, persist);
+}
+
+void Driver::setLowSpeedCourseOverGroundFilter(bool state, bool persist)
+{
+    setConfigKeyValue(UBX::ODO_USE_COG, state, persist);
+}
+
+void Driver::setOutputLowPassFilteredVelocity(bool state, bool persist)
+{
+    setConfigKeyValue(UBX::ODO_OUTLPVEL, state, persist);
+}
+
+void Driver::setOutputLowPassFilteredHeading(bool state, bool persist)
+{
+    setConfigKeyValue(UBX::ODO_OUTLPCOG, state, persist);
+}
+
+void Driver::setOdometerProfile(OdometerProfile profile, bool persist)
+{
+    setConfigKeyValue(UBX::ODO_PROFILE, static_cast<uint8_t>(profile), persist);
+}
+
+void Driver::setUpperSpeedLimitForHeadingFilter(uint8_t speed, bool persist)
+{
+    setConfigKeyValue(UBX::ODO_COGMAXSPEED, speed, persist);
+}
+
+void Driver::setMaxPositionAccuracyForLowSpeedHeadingFilter(uint8_t accuracy, bool persist)
+{
+    setConfigKeyValue(UBX::ODO_COGMAXPOSACC, accuracy, persist);
+}
+
+void Driver::setVelocityLowPassFilterLevel(uint8_t gain, bool persist)
+{
+    setConfigKeyValue(UBX::ODO_VELLPGAIN, gain, persist);
+}
+
+void Driver::setHeadingLowPassFilterLevel(uint8_t gain, bool persist)
+{
+    setConfigKeyValue(UBX::ODO_COGLPGAIN, gain, persist);
+}
