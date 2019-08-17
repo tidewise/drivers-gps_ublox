@@ -131,7 +131,7 @@ namespace gps_ublox
                 template<typename T>
                 std::vector<uint8_t> getConfigValueSetPacket(ConfigKeyId key_id,
                                                              T value,
-                                                             bool persist = false) const;
+                                                             bool persist = true) const;
         };
     } // end namespace protocols
 } // end namespace gps_ublox
