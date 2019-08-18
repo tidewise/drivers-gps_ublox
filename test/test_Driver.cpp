@@ -1,4 +1,5 @@
 #include <vector>
+#include <stdexcept>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -288,4 +289,38 @@ TEST_F(DriverTest, it_throws_if_version_response_is_invalid) {
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     ASSERT_THROW(driver.readBoardInfo(), iodrivers_base::TimeoutError);
+}
+
+TEST_F(DriverTest, it_sets_position_measurement_period) {
+    IODRIVERS_BASE_MOCK();
+
+    UBX::Frame frame;
+    frame.msg_class = UBX::MSG_CLASS_ACK;
+    frame.msg_id = UBX::MSG_ID_ACK;
+    frame.payload.push_back(UBX::MSG_CLASS_CFG);
+    frame.payload.push_back(UBX::MSG_ID_VALSET);
+
+    vector<uint8_t> packet = parser.getConfigValueSetPacket<uint16_t>(UBX::RATE_MEAS, 100, true);
+    vector<uint8_t> reply = frame.toPacket();
+    EXPECT_REPLY(packet, reply);
+    driver.setPositionMeasurementPeriod(100, true);
+}
+
+TEST_F(DriverTest, it_throws_if_measurements_per_solution_number_too_high) {
+    ASSERT_THROW(driver.setMeasurementsPerSolutionRatio(200, true), std::invalid_argument);
+}
+
+TEST_F(DriverTest, it_sets_number_of_measurments_per_solution) {
+    IODRIVERS_BASE_MOCK();
+
+    UBX::Frame frame;
+    frame.msg_class = UBX::MSG_CLASS_ACK;
+    frame.msg_id = UBX::MSG_ID_ACK;
+    frame.payload.push_back(UBX::MSG_CLASS_CFG);
+    frame.payload.push_back(UBX::MSG_ID_VALSET);
+
+    vector<uint8_t> packet = parser.getConfigValueSetPacket<uint16_t>(UBX::RATE_NAV, 93, true);
+    vector<uint8_t> reply = frame.toPacket();
+    EXPECT_REPLY(packet, reply);
+    driver.setMeasurementsPerSolutionRatio(93, true);
 }

@@ -2,6 +2,7 @@
 #include <base/Time.hpp>
 #include <iostream>
 #include <map>
+#include <stdexcept>
 
 using namespace std;
 using namespace gps_ublox;
@@ -208,4 +209,17 @@ void Driver::setVelocityLowPassFilterLevel(uint8_t gain, bool persist)
 void Driver::setHeadingLowPassFilterLevel(uint8_t gain, bool persist)
 {
     setConfigKeyValue(UBX::ODO_COGLPGAIN, gain, persist);
+}
+
+void Driver::setPositionMeasurementPeriod(uint16_t period, bool persist)
+{
+    setConfigKeyValue(UBX::RATE_MEAS, period, persist);
+}
+
+void Driver::setMeasurementsPerSolutionRatio(uint16_t ratio, bool persist)
+{
+    if (ratio > 127) {
+        throw std::invalid_argument("Maximum number of measurements per solution is 127");
+    }
+    setConfigKeyValue(UBX::RATE_NAV, ratio, persist);
 }

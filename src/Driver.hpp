@@ -152,6 +152,20 @@ namespace gps_ublox
              */
             void setHeadingLowPassFilterLevel(uint8_t gain, bool persist = true);
 
+            /** Sets the period between GNSS measurements
+             *
+             * @param period Period, in milliseconds
+             * @param persist Whether the configuration should be persisted
+             */
+            void setPositionMeasurementPeriod(uint16_t period, bool persist = true);
+
+            /** Sets the number of measurements between navigation solutions
+             *
+             * @param ratio Maximum of 127 measruements between solutions
+             * @param persist Whether the configuration should be persisted
+             */
+            void setMeasurementsPerSolutionRatio(uint16_t ratio, bool persist = true);
+
             /** Requests device version information
              */
             BoardInfo readBoardInfo();

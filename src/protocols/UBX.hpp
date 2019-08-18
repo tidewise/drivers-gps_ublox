@@ -103,7 +103,9 @@ namespace gps_ublox
                     ODO_COGMAXSPEED = 0x20220021,
                     ODO_COGMAXPOSACC = 0x20220022,
                     ODO_VELLPGAIN = 0x20220031,
-                    ODO_COGLPGAIN = 0x20220032
+                    ODO_COGLPGAIN = 0x20220032,
+                    RATE_MEAS = 0x30210001,
+                    RATE_NAV = 0x30210002
                 };
 
                 /** Represents an UBX binary data frame
