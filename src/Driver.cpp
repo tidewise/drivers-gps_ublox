@@ -17,7 +17,7 @@ int Driver::extractPacket(const uint8_t *buffer, size_t buffer_size) const
 }
 
 BoardInfo Driver::readBoardInfo() {
-    auto frame = pollFrame(UBX::MSG_CLASS_MON, UBX::MSG_ID_VER);
+    UBX::Frame frame = pollFrame(UBX::MSG_CLASS_MON, UBX::MSG_ID_VER);
 
     BoardInfo info;
     info.software_version = string(reinterpret_cast<char*>(&frame.payload[0]));
@@ -40,7 +40,8 @@ UBX::Frame Driver::pollFrame(uint8_t class_id, uint8_t msg_id)
     return waitForFrame(class_id, msg_id);
 }
 
-UBX::Frame Driver::waitForFrame(uint8_t class_id, uint8_t msg_id)
+UBX::Frame Driver::waitForPacket(const uint8_t *class_id, const uint8_t *msg_id,
+                                 const std::vector<uint8_t> *payload)
 {
     base::Time deadline = base::Time::now() + getReadTimeout();
     while (base::Time::now() < deadline) {
@@ -48,34 +49,28 @@ UBX::Frame Driver::waitForFrame(uint8_t class_id, uint8_t msg_id)
         int bytes = readPacket(mReadBuffer, BUFFER_SIZE, remaining);
 
         UBX::Frame frame = UBX::Frame::fromPacket(mReadBuffer, bytes);
-        if (frame.msg_class == class_id && frame.msg_id == msg_id)
-            return frame;
+        if (class_id && *class_id != frame.msg_class) continue;
+        if (msg_id && *msg_id != frame.msg_id) continue;
+        if (payload && *payload != frame.payload) continue;
+        return frame;
     }
 
     throw iodrivers_base::TimeoutError(
         iodrivers_base::TimeoutError::PACKET,
-        "Did not receive an acknowledgement within the expected timeout");
+        "Did not receive the expected packet within the timeout");
+}
+
+UBX::Frame Driver::waitForFrame(uint8_t class_id, uint8_t msg_id)
+{
+    return waitForPacket(&class_id, &msg_id);
 }
 
 bool Driver::waitForAck(uint8_t class_id, uint8_t msg_id)
 {
-    base::Time deadline = base::Time::now() + getReadTimeout();
-    while (base::Time::now() < deadline) {
-        base::Time remaining = deadline - base::Time::now();
-        int bytes = readPacket(mReadBuffer, BUFFER_SIZE, remaining);
+    uint8_t ack_class = UBX::MSG_CLASS_ACK;
+    vector<uint8_t> payload = { class_id, msg_id };
 
-        UBX::Frame frame = UBX::Frame::fromPacket(mReadBuffer, bytes);
-
-        if (frame.msg_class != UBX::MSG_CLASS_ACK) continue;
-        if (frame.payload[0] != class_id) continue;
-        if (frame.payload[1] != msg_id) continue;
-
-        return frame.msg_id == UBX::MSG_ID_ACK ? true : false;
-    }
-
-    throw iodrivers_base::TimeoutError(
-        iodrivers_base::TimeoutError::PACKET,
-        "Did not receive an acknowledgement within the expected timeout");
+    return waitForPacket(&ack_class, nullptr, &payload).msg_id == UBX::MSG_ID_ACK;
 }
 
 template<typename T>

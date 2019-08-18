@@ -6,6 +6,7 @@
 #include <base/Time.hpp>
 #include <gps_ublox/protocols/UBX.hpp>
 #include <gps_ublox/Driver.hpp>
+#include <gps_ublox/BoardInfo.hpp>
 #include <iodrivers_base/FixtureGTest.hpp>
 
 using namespace std;
@@ -261,4 +262,30 @@ TEST_F(DriverTest, it_sets_heading_lowpass_filter_level) {
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setHeadingLowPassFilterLevel(3, true);
+}
+
+TEST_F(DriverTest, it_requests_device_info) {
+    IODRIVERS_BASE_MOCK();
+    UBX::Frame frame;
+    frame.msg_class = UBX::MSG_CLASS_MON;
+    frame.msg_id = UBX::MSG_ID_VER;
+    frame.payload.resize(100, 0);
+    vector<uint8_t> packet = UBX::Frame({ UBX::MSG_CLASS_MON, UBX::MSG_ID_VER }).toPacket();
+    vector<uint8_t> reply = frame.toPacket();
+    EXPECT_REPLY(packet, reply);
+    BoardInfo info = driver.readBoardInfo();
+    ASSERT_EQ("", info.software_version);
+    ASSERT_EQ("", info.software_version);
+    ASSERT_EQ(2, info.extensions.size());
+}
+
+TEST_F(DriverTest, it_throws_if_version_response_is_invalid) {
+    IODRIVERS_BASE_MOCK();
+    UBX::Frame frame;
+    frame.msg_class = UBX::MSG_CLASS_MON;
+    frame.msg_id = UBX::MSG_ID_VALSET;
+    vector<uint8_t> packet = UBX::Frame({ UBX::MSG_CLASS_MON, UBX::MSG_ID_VER }).toPacket();
+    vector<uint8_t> reply = frame.toPacket();
+    EXPECT_REPLY(packet, reply);
+    ASSERT_THROW(driver.readBoardInfo(), iodrivers_base::TimeoutError);
 }

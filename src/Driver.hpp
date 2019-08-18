@@ -24,6 +24,9 @@ namespace gps_ublox
 
             protocols::UBX::Frame pollFrame(uint8_t class_id, uint8_t msg_id);
             protocols::UBX::Frame waitForFrame(uint8_t class_id, uint8_t msg_id);
+            protocols::UBX::Frame waitForPacket(const uint8_t *class_id = nullptr,
+                                                const uint8_t *msg_id = nullptr,
+                                                const std::vector<uint8_t> *payload = nullptr);
             bool waitForAck(uint8_t class_id, uint8_t msg_id);
 
         protected:
@@ -149,6 +152,8 @@ namespace gps_ublox
              */
             void setHeadingLowPassFilterLevel(uint8_t gain, bool persist = true);
 
+            /** Requests device version information
+             */
             BoardInfo readBoardInfo();
     };
 
