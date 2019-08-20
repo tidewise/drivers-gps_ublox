@@ -5,14 +5,14 @@
 #include <gmock/gmock.h>
 
 #include <base/Time.hpp>
-#include <gps_ublox/protocols/UBX.hpp>
+#include <gps_ublox/UBX.hpp>
 #include <gps_ublox/Driver.hpp>
 #include <gps_ublox/BoardInfo.hpp>
 #include <iodrivers_base/FixtureGTest.hpp>
 
 using namespace std;
 using namespace gps_ublox;
-using namespace protocols;
+using namespace UBX;
 
 struct DriverTest : public ::testing::Test, iodrivers_base::Fixture<Driver> {
     vector<uint8_t> buffer;
@@ -21,19 +21,18 @@ struct DriverTest : public ::testing::Test, iodrivers_base::Fixture<Driver> {
         driver.openURI("test://");
         driver.setReadTimeout(base::Time::fromMilliseconds(100));
     }
-    UBX parser;
 };
 
 TEST_F(DriverTest, it_enables_a_device_port) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket(UBX::USB_ENABLED, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(USB_ENABLED, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setPortEnabled(Driver::PORT_USB, true);
@@ -42,13 +41,13 @@ TEST_F(DriverTest, it_enables_a_device_port) {
 TEST_F(DriverTest, it_disables_a_device_port) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket(UBX::SPI_ENABLED, false, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(SPI_ENABLED, false, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setPortEnabled(Driver::PORT_SPI, false);
@@ -57,13 +56,13 @@ TEST_F(DriverTest, it_disables_a_device_port) {
 TEST_F(DriverTest, it_throws_if_valset_is_rejected) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_NACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_NACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket(UBX::USB_ENABLED, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(USB_ENABLED, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     ASSERT_THROW(driver.setPortEnabled(Driver::PORT_USB, true), ConfigValueSetError);
@@ -72,30 +71,30 @@ TEST_F(DriverTest, it_throws_if_valset_is_rejected) {
 TEST_F(DriverTest, it_throws_if_an_valset_ack_is_not_received) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_NACK;
-    frame.payload.push_back(UBX::MSG_CLASS_ACK);
-    frame.payload.push_back(UBX::MSG_ID_NACK);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_NACK;
+    frame.payload.push_back(MSG_CLASS_ACK);
+    frame.payload.push_back(MSG_ID_NACK);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket(UBX::USB_ENABLED, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(USB_ENABLED, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     ASSERT_THROW(driver.setPortEnabled(Driver::PORT_USB, true), iodrivers_base::TimeoutError);
 }
 
 TEST_F(DriverTest, it_keeps_reading_until_an_ack_is_received) {
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_ACK);
-    frame.payload.push_back(UBX::MSG_ID_NACK);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_ACK);
+    frame.payload.push_back(MSG_ID_NACK);
     pushDataToDriver(frame.toPacket());
     pushDataToDriver(frame.toPacket());
     pushDataToDriver(frame.toPacket());
     frame.payload.clear();
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
     pushDataToDriver(frame.toPacket());
     driver.setPortEnabled(Driver::PORT_USB, true);
 }
@@ -103,13 +102,13 @@ TEST_F(DriverTest, it_keeps_reading_until_an_ack_is_received) {
 TEST_F(DriverTest, it_enables_an_output_protocol_on_a_given_port) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket(UBX::UART1_OUT_UBX, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(UART1_OUT_UBX, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setOutputProtocol(Driver::PORT_UART1, Driver::PROTOCOL_UBX, true);
@@ -118,13 +117,13 @@ TEST_F(DriverTest, it_enables_an_output_protocol_on_a_given_port) {
 TEST_F(DriverTest, it_disables_an_output_protocol_on_a_given_port) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket(UBX::UART2_OUT_UBX, false, false);
+    vector<uint8_t> packet = getConfigValueSetPacket(UART2_OUT_UBX, false, false);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setOutputProtocol(Driver::PORT_UART2, Driver::PROTOCOL_UBX, false, false);
@@ -133,13 +132,13 @@ TEST_F(DriverTest, it_disables_an_output_protocol_on_a_given_port) {
 TEST_F(DriverTest, it_enables_odometer) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket(UBX::ODO_USE_ODO, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(ODO_USE_ODO, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setOdometer(true);
@@ -148,13 +147,13 @@ TEST_F(DriverTest, it_enables_odometer) {
 TEST_F(DriverTest, it_enables_heading_filter) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket(UBX::ODO_USE_COG, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(ODO_USE_COG, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setLowSpeedCourseOverGroundFilter(true);
@@ -163,13 +162,13 @@ TEST_F(DriverTest, it_enables_heading_filter) {
 TEST_F(DriverTest, it_enables_lowpass_filtered_velocity_output) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket(UBX::ODO_OUTLPVEL, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(ODO_OUTLPVEL, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setOutputLowPassFilteredVelocity(true);
@@ -178,13 +177,13 @@ TEST_F(DriverTest, it_enables_lowpass_filtered_velocity_output) {
 TEST_F(DriverTest, it_enables_lowpass_filtered_heading_output) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket(UBX::ODO_OUTLPCOG, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(ODO_OUTLPCOG, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setOutputLowPassFilteredHeading(true);
@@ -193,13 +192,13 @@ TEST_F(DriverTest, it_enables_lowpass_filtered_heading_output) {
 TEST_F(DriverTest, it_sets_odometer_profile) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket<uint8_t>(UBX::ODO_PROFILE, 3, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(ODO_PROFILE, 3, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setOdometerProfile(Driver::ODOM_CAR, true);
@@ -208,13 +207,13 @@ TEST_F(DriverTest, it_sets_odometer_profile) {
 TEST_F(DriverTest, it_sets_upper_speed_limit_for_heading_filter) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket<uint8_t>(UBX::ODO_COGMAXSPEED, 33, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(ODO_COGMAXSPEED, 33, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setUpperSpeedLimitForHeadingFilter(33, true);
@@ -223,13 +222,13 @@ TEST_F(DriverTest, it_sets_upper_speed_limit_for_heading_filter) {
 TEST_F(DriverTest, it_sets_max_position_accuracy_for_heading_filter) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket<uint8_t>(UBX::ODO_COGMAXPOSACC, 12, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(ODO_COGMAXPOSACC, 12, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setMaxPositionAccuracyForLowSpeedHeadingFilter(12, true);
@@ -238,13 +237,13 @@ TEST_F(DriverTest, it_sets_max_position_accuracy_for_heading_filter) {
 TEST_F(DriverTest, it_sets_velocity_lowpass_filter_level) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket<uint8_t>(UBX::ODO_VELLPGAIN, 23, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(ODO_VELLPGAIN, 23, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setVelocityLowPassFilterLevel(23, true);
@@ -253,13 +252,13 @@ TEST_F(DriverTest, it_sets_velocity_lowpass_filter_level) {
 TEST_F(DriverTest, it_sets_heading_lowpass_filter_level) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket<uint8_t>(UBX::ODO_COGLPGAIN, 3, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(ODO_COGLPGAIN, 3, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setHeadingLowPassFilterLevel(3, true);
@@ -267,11 +266,11 @@ TEST_F(DriverTest, it_sets_heading_lowpass_filter_level) {
 
 TEST_F(DriverTest, it_requests_device_info) {
     IODRIVERS_BASE_MOCK();
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_MON;
-    frame.msg_id = UBX::MSG_ID_VER;
+    Frame frame;
+    frame.msg_class = MSG_CLASS_MON;
+    frame.msg_id = MSG_ID_VER;
     frame.payload.resize(100, 0);
-    vector<uint8_t> packet = UBX::Frame({ UBX::MSG_CLASS_MON, UBX::MSG_ID_VER }).toPacket();
+    vector<uint8_t> packet = Frame({ MSG_CLASS_MON, MSG_ID_VER }).toPacket();
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     BoardInfo info = driver.readBoardInfo();
@@ -282,10 +281,10 @@ TEST_F(DriverTest, it_requests_device_info) {
 
 TEST_F(DriverTest, it_throws_if_version_response_is_invalid) {
     IODRIVERS_BASE_MOCK();
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_MON;
-    frame.msg_id = UBX::MSG_ID_VALSET;
-    vector<uint8_t> packet = UBX::Frame({ UBX::MSG_CLASS_MON, UBX::MSG_ID_VER }).toPacket();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_MON;
+    frame.msg_id = MSG_ID_VALSET;
+    vector<uint8_t> packet = Frame({ MSG_CLASS_MON, MSG_ID_VER }).toPacket();
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     ASSERT_THROW(driver.readBoardInfo(), iodrivers_base::TimeoutError);
@@ -294,13 +293,13 @@ TEST_F(DriverTest, it_throws_if_version_response_is_invalid) {
 TEST_F(DriverTest, it_sets_position_measurement_period) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket<uint16_t>(UBX::RATE_MEAS, 100, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint16_t>(RATE_MEAS, 100, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setPositionMeasurementPeriod(100, true);
@@ -313,13 +312,13 @@ TEST_F(DriverTest, it_throws_if_measurements_per_solution_number_too_high) {
 TEST_F(DriverTest, it_sets_number_of_measurments_per_solution) {
     IODRIVERS_BASE_MOCK();
 
-    UBX::Frame frame;
-    frame.msg_class = UBX::MSG_CLASS_ACK;
-    frame.msg_id = UBX::MSG_ID_ACK;
-    frame.payload.push_back(UBX::MSG_CLASS_CFG);
-    frame.payload.push_back(UBX::MSG_ID_VALSET);
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = parser.getConfigValueSetPacket<uint16_t>(UBX::RATE_NAV, 93, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint16_t>(RATE_NAV, 93, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setMeasurementsPerSolutionRatio(93, true);

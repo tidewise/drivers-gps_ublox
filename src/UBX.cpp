@@ -4,24 +4,13 @@
 #include <array>
 #include <vector>
 
-#include <gps_ublox/protocols/UBX.hpp>
+#include <gps_ublox/UBX.hpp>
 
 using namespace std;
 using namespace gps_ublox;
-using namespace protocols;
+using namespace UBX;
 
-const uint8_t UBX::SYNC_1 = 0xB5;
-const uint8_t UBX::SYNC_2 = 0x62;
-const uint8_t UBX::SYNC_1_IDX = 0;
-const uint8_t UBX::SYNC_2_IDX = 1;
-const uint8_t UBX::MSG_CLASS_IDX = 2;
-const uint8_t UBX::MSG_ID_IDX = 3;
-const uint8_t UBX::LENGTH_LSB_IDX = 4;
-const uint8_t UBX::LENGTH_MSB_IDX = 5;
-const uint8_t UBX::PAYLOAD_IDX = 6;
-const size_t UBX::FRAMING_SIZE_OVERHEAD = 8;
-
-UBX::Frame UBX::Frame::fromPacket(const uint8_t *buffer, size_t size)
+Frame Frame::fromPacket(const uint8_t *buffer, size_t size)
 {
     uint16_t payload_size = buffer[LENGTH_LSB_IDX] |
                             (buffer[LENGTH_MSB_IDX] << 8);
@@ -35,7 +24,7 @@ UBX::Frame UBX::Frame::fromPacket(const uint8_t *buffer, size_t size)
     return frame;
 }
 
-vector<uint8_t> UBX::Frame::toPacket() const
+vector<uint8_t> Frame::toPacket() const
 {
     vector<uint8_t> packet = {
         SYNC_1,
@@ -48,7 +37,7 @@ vector<uint8_t> UBX::Frame::toPacket() const
     packet.push_back((payload.size() & 0xFF00) >> 8);
     packet.insert(packet.end(), payload.begin(), payload.end());
 
-    array<uint8_t, 2> ck = UBX::checksum(&packet[MSG_CLASS_IDX], &packet[0] + packet.size());
+    array<uint8_t, 2> ck = checksum(&packet[MSG_CLASS_IDX], &packet[0] + packet.size());
 
     packet.push_back(ck[0]);
     packet.push_back(ck[1]);
@@ -56,7 +45,7 @@ vector<uint8_t> UBX::Frame::toPacket() const
     return packet;
 }
 
-int UBX::extractPacket(const uint8_t *buffer, size_t buffer_size) const
+int UBX::extractPacket(const uint8_t *buffer, size_t buffer_size)
 {
     if (buffer_size < FRAMING_SIZE_OVERHEAD)
         return 0;
@@ -117,12 +106,12 @@ void toLittleEndian(vector<uint8_t> &buffer, T value)
 }
 
 namespace gps_ublox {
-namespace protocols {
+namespace UBX {
 
 template<typename T>
-std::vector<uint8_t> UBX::getConfigValueSetPacket(ConfigKeyId key_id,
-                                                  T value,
-                                                  bool persist) const
+std::vector<uint8_t> getConfigValueSetPacket(ConfigKeyId key_id,
+                                             T value,
+                                             bool persist)
 {
     Frame frame;
     frame.msg_class = MSG_CLASS_CFG;
@@ -138,13 +127,13 @@ std::vector<uint8_t> UBX::getConfigValueSetPacket(ConfigKeyId key_id,
     return frame.toPacket();
 }
 
-template vector<uint8_t> UBX::getConfigValueSetPacket(ConfigKeyId, uint8_t, bool) const;
-template vector<uint8_t> UBX::getConfigValueSetPacket(ConfigKeyId, uint16_t, bool) const;
+template vector<uint8_t> getConfigValueSetPacket(ConfigKeyId, uint8_t, bool);
+template vector<uint8_t> getConfigValueSetPacket(ConfigKeyId, uint16_t, bool);
 
 template<>
-vector<uint8_t> UBX::getConfigValueSetPacket<bool>(ConfigKeyId key_id,
-                                                   bool value,
-                                                   bool persist) const
+vector<uint8_t> getConfigValueSetPacket<bool>(ConfigKeyId key_id,
+                                              bool value,
+                                              bool persist)
 {
     return getConfigValueSetPacket<uint8_t>(key_id, value ? 1 : 0, persist);
 }

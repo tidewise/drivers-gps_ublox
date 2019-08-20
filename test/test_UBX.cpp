@@ -3,37 +3,37 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <gps_ublox/protocols/UBX.hpp>
+#include <gps_ublox/UBX.hpp>
 
 using namespace std;
-using namespace gps_ublox::protocols;
+using namespace gps_ublox;
+using namespace UBX;
 
 struct UBXTest : public ::testing::Test {
     vector<uint8_t> buffer;
     UBXTest() {
         buffer.resize(256, 0);
     }
-    UBX ubx;
 };
 
 TEST_F(UBXTest, it_waits_for_more_bytes_if_the_buffer_is_too_small) {
-    ASSERT_EQ(0, ubx.extractPacket(&buffer[0], 7));
+    ASSERT_EQ(0, extractPacket(&buffer[0], 7));
 }
 TEST_F(UBXTest, it_discards_a_byte_if_it_is_not_a_start_byte) {
     buffer[0] = 0x00;
-    ASSERT_EQ(-1, ubx.extractPacket(&buffer[0], 8));
+    ASSERT_EQ(-1, extractPacket(&buffer[0], 8));
 }
 TEST_F(UBXTest, it_discards_a_byte_if_the_start_sequence_is_invalid) {
     buffer[0] = UBX::SYNC_1;
     buffer[1] = 0x00;
-    ASSERT_EQ(-1, ubx.extractPacket(&buffer[0], 8));
+    ASSERT_EQ(-1, extractPacket(&buffer[0], 8));
 }
 TEST_F(UBXTest, it_discards_a_byte_if_the_packet_has_an_invalid_checksum) {
     buffer[0] = UBX::SYNC_1;
     buffer[1] = UBX::SYNC_2;
     buffer[2] = buffer[3] = buffer[4] = buffer[5] = 0;
     buffer[6] = buffer[7] = 1;
-    ASSERT_EQ(-1, ubx.extractPacket(&buffer[0], 8));
+    ASSERT_EQ(-1, extractPacket(&buffer[0], 8));
 }
 
 /* Copied from device documentation */
@@ -55,18 +55,18 @@ static void insertChecksum(vector<uint8_t> &buffer) {
 TEST_F(UBXTest, it_accepts_a_valid_zero_length_payload_packet) {
     buffer = { UBX::SYNC_1, UBX::SYNC_2, 0x01, 0x02, 0x00, 0x00 };
     insertChecksum(buffer);
-    ASSERT_EQ(8, ubx.extractPacket(&buffer[0], 10));
+    ASSERT_EQ(8, extractPacket(&buffer[0], 10));
 }
 
 TEST_F(UBXTest, it_waits_for_more_bytes_if_packet_is_incomplete) {
     buffer = { UBX::SYNC_1, UBX::SYNC_2, 0x01, 0x02, 0x01, 0x00, 0x00, 0x00 };
-    ASSERT_EQ(0, ubx.extractPacket(&buffer[0], 8));
+    ASSERT_EQ(0, extractPacket(&buffer[0], 8));
 }
 
 TEST_F(UBXTest, it_accepts_a_valid_full_packet) {
     buffer = { UBX::SYNC_1, UBX::SYNC_2, 0x01, 0x02, 0x02, 0x00, 0xAA, 0xBB };
     insertChecksum(buffer);
-    ASSERT_EQ(10, ubx.extractPacket(&buffer[0], 12));
+    ASSERT_EQ(10, extractPacket(&buffer[0], 12));
 }
 
 TEST_F(UBXTest, it_deserializes_a_packet) {
@@ -86,7 +86,7 @@ TEST_F(UBXTest, it_serializes_a_frame) {
 }
 
 TEST_F(UBXTest, it_returns_a_valset_all_layers_packet) {
-    vector<uint8_t> packet = ubx.getConfigValueSetPacket(UBX::I2C_ENABLED, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(UBX::I2C_ENABLED, true);
     buffer = { UBX::SYNC_1, UBX::SYNC_2, UBX::MSG_CLASS_CFG, UBX::MSG_ID_VALSET, 0x09, 0x00,
                0x00, UBX::LAYER_ALL, 0x00, 0x00, 0x03, 0x00, 0x51, 0x10, 0x01 };
 
@@ -95,7 +95,7 @@ TEST_F(UBXTest, it_returns_a_valset_all_layers_packet) {
 }
 
 TEST_F(UBXTest, it_returns_a_valset_ram_layer_packet) {
-    vector<uint8_t> packet = ubx.getConfigValueSetPacket(UBX::I2C_ENABLED, false, false);
+    vector<uint8_t> packet = getConfigValueSetPacket(UBX::I2C_ENABLED, false, false);
     buffer = { UBX::SYNC_1, UBX::SYNC_2, UBX::MSG_CLASS_CFG, UBX::MSG_ID_VALSET, 0x09, 0x00,
                0x00, UBX::LAYER_RAM, 0x00, 0x00, 0x03, 0x00, 0x51, 0x10, 0x00 };
 

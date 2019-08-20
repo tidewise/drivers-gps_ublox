@@ -2,7 +2,7 @@
 #define GPS_UBLOX_DRIVER_HPP
 
 #include <iodrivers_base/Driver.hpp>
-#include <gps_ublox/protocols/UBX.hpp>
+#include <gps_ublox/UBX.hpp>
 #include <gps_ublox/BoardInfo.hpp>
 #include <stdexcept>
 
@@ -20,13 +20,12 @@ namespace gps_ublox
             static const size_t BUFFER_SIZE = 256 * 15;
             uint8_t mWriteBuffer[BUFFER_SIZE];
             uint8_t mReadBuffer[BUFFER_SIZE];
-            protocols::UBX mUBXParser;
 
-            protocols::UBX::Frame pollFrame(uint8_t class_id, uint8_t msg_id);
-            protocols::UBX::Frame waitForFrame(uint8_t class_id, uint8_t msg_id);
-            protocols::UBX::Frame waitForPacket(const uint8_t *class_id = nullptr,
-                                                const uint8_t *msg_id = nullptr,
-                                                const std::vector<uint8_t> *payload = nullptr);
+            UBX::Frame pollFrame(uint8_t class_id, uint8_t msg_id);
+            UBX::Frame waitForFrame(uint8_t class_id, uint8_t msg_id);
+            UBX::Frame waitForPacket(const uint8_t *class_id = nullptr,
+                                     const uint8_t *msg_id = nullptr,
+                                     const std::vector<uint8_t> *payload = nullptr);
             bool waitForAck(uint8_t class_id, uint8_t msg_id);
 
         protected:
@@ -38,7 +37,7 @@ namespace gps_ublox
 
         public:
             template<typename T>
-            void setConfigKeyValue(protocols::UBX::ConfigKeyId key_id, T state, bool persist = false);
+            void setConfigKeyValue(UBX::ConfigKeyId key_id, T state, bool persist = false);
 
             /** Identifies the device's ports
              */
