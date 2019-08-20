@@ -37,24 +37,24 @@ namespace gps_ublox
 
         public:
             template<typename T>
-            void setConfigKeyValue(UBX::ConfigKeyId key_id, T state, bool persist = false);
+            void setConfigKeyValue(uint32_t key_id, T state, bool persist = false);
 
             /** Identifies the device's ports
              */
             enum DevicePort {
-                PORT_I2C,
-                PORT_SPI,
-                PORT_UART1,
-                PORT_UART2,
-                PORT_USB
+                PORT_I2C = 0x10710000,
+                PORT_SPI = 0x10790000,
+                PORT_UART1 = 0x10730000,
+                PORT_UART2 = 0x10750000,
+                PORT_USB = 0x10770000
             };
 
             /** The protocols supported by the device
              */
             enum DeviceProtocol {
-                PROTOCOL_UBX,
-                PROTOCOL_NMEA,
-                PROTOCOL_RTCM3X
+                PROTOCOL_UBX = 1,
+                PROTOCOL_NMEA = 2,
+                PROTOCOL_RTCM3X = 4
             };
 
             /** Odometer profile enumeration
@@ -67,6 +67,13 @@ namespace gps_ublox
                 ODOM_CUSTOM
             };
 
+            /** Data direction
+             */
+            enum DataDirection {
+                DIRECTION_INPUT = 0,
+                DIRECTION_OUTPUT = 0x00010000,
+            };
+
             Driver();
 
             /** Enables/disables a port
@@ -76,16 +83,6 @@ namespace gps_ublox
              * @param persist Whether the configuration should be persisted
              */
             void setPortEnabled(DevicePort port, bool state, bool persist = true);
-
-            /** Enables/disables a protocol on a given port
-             *
-             * @param port Port to be configured
-             * @param protocol A protocol to enable/disable
-             * @param state True if the protocol is to be enabled
-             * @param persist Whether the configuration should be persisted
-             */
-            void setInputProtocol(DevicePort port, DeviceProtocol protocol, bool state, bool persist = true);
-            void setOutputProtocol(DevicePort port, DeviceProtocol protocol, bool state, bool persist = true);
 
             /** Whether odometer is used or not
              *
@@ -168,6 +165,17 @@ namespace gps_ublox
             /** Requests device version information
              */
             BoardInfo readBoardInfo();
+
+            /** Enables/disables input and output protocols on a port
+             *
+             * @param port Port to configure
+             * @param direction Whether to configure an input or output protocol
+             * @param protocol Protocol to enable/disable
+             * @param state Whether protocol should be enabled or disabled
+             * @param persist Whether the configuration should be persisted
+             */
+            void setPortProtocol(DevicePort port, DataDirection direction,
+                                 DeviceProtocol protocol, bool state, bool persist = true);
     };
 
 } // end namespace gps_ublox

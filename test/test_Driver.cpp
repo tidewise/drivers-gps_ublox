@@ -99,34 +99,94 @@ TEST_F(DriverTest, it_keeps_reading_until_an_ack_is_received) {
     driver.setPortEnabled(Driver::PORT_USB, true);
 }
 
-TEST_F(DriverTest, it_enables_an_output_protocol_on_a_given_port) {
-    IODRIVERS_BASE_MOCK();
-
+TEST_F(DriverTest, it_enables_nmea_output_on_i2c) {
     Frame frame;
     frame.msg_class = MSG_CLASS_ACK;
     frame.msg_id = MSG_ID_ACK;
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket(UART1_OUT_UBX, true, true);
-    vector<uint8_t> reply = frame.toPacket();
-    EXPECT_REPLY(packet, reply);
-    driver.setOutputProtocol(Driver::PORT_UART1, Driver::PROTOCOL_UBX, true);
+    pushDataToDriver(frame.toPacket());
+    driver.setPortProtocol(
+        Driver::PORT_I2C,
+        Driver::DIRECTION_OUTPUT,
+        Driver::PROTOCOL_NMEA,
+        true,
+        true);
+
+    ASSERT_EQ(getConfigValueSetPacket(0x10720002, true, true), readDataFromDriver());
 }
 
-TEST_F(DriverTest, it_disables_an_output_protocol_on_a_given_port) {
-    IODRIVERS_BASE_MOCK();
-
+TEST_F(DriverTest, it_disables_ubx_input_on_usb) {
     Frame frame;
     frame.msg_class = MSG_CLASS_ACK;
     frame.msg_id = MSG_ID_ACK;
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket(UART2_OUT_UBX, false, false);
-    vector<uint8_t> reply = frame.toPacket();
-    EXPECT_REPLY(packet, reply);
-    driver.setOutputProtocol(Driver::PORT_UART2, Driver::PROTOCOL_UBX, false, false);
+    pushDataToDriver(frame.toPacket());
+    driver.setPortProtocol(
+        Driver::PORT_USB,
+        Driver::DIRECTION_INPUT,
+        Driver::PROTOCOL_UBX,
+        false,
+        true);
+
+    ASSERT_EQ(getConfigValueSetPacket(0x10770001, false, true), readDataFromDriver());
+}
+
+TEST_F(DriverTest, it_enables_rtcm_input_on_uart1) {
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
+
+    pushDataToDriver(frame.toPacket());
+    driver.setPortProtocol(
+        Driver::PORT_UART1,
+        Driver::DIRECTION_INPUT,
+        Driver::PROTOCOL_RTCM3X,
+        true,
+        false);
+
+    ASSERT_EQ(getConfigValueSetPacket(0x10730004, true, false), readDataFromDriver());
+}
+
+TEST_F(DriverTest, it_enables_rtcm_output_on_uart2) {
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
+
+    pushDataToDriver(frame.toPacket());
+    driver.setPortProtocol(
+        Driver::PORT_UART2,
+        Driver::DIRECTION_OUTPUT,
+        Driver::PROTOCOL_RTCM3X,
+        true,
+        false);
+
+    ASSERT_EQ(getConfigValueSetPacket(0x10760004, true, false), readDataFromDriver());
+}
+
+TEST_F(DriverTest, it_enables_nmea_output_on_spi) {
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
+
+    pushDataToDriver(frame.toPacket());
+    driver.setPortProtocol(
+        Driver::PORT_SPI,
+        Driver::DIRECTION_OUTPUT,
+        Driver::PROTOCOL_NMEA,
+        true,
+        false);
+
+    ASSERT_EQ(getConfigValueSetPacket(0x107a0002, true, false), readDataFromDriver());
 }
 
 TEST_F(DriverTest, it_enables_odometer) {

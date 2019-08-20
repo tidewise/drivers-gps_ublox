@@ -75,7 +75,7 @@ bool Driver::waitForAck(uint8_t class_id, uint8_t msg_id)
 }
 
 template<typename T>
-void Driver::setConfigKeyValue(ConfigKeyId key_id, T value, bool persist)
+void Driver::setConfigKeyValue(uint32_t key_id, T value, bool persist)
 {
     vector<uint8_t> packet = getConfigValueSetPacket<T>(key_id, value, persist);
     writePacket(&packet[0], packet.size());
@@ -85,9 +85,9 @@ void Driver::setConfigKeyValue(ConfigKeyId key_id, T value, bool persist)
     }
 }
 
-template void Driver::setConfigKeyValue<bool>(ConfigKeyId, bool, bool);
-template void Driver::setConfigKeyValue<uint8_t>(ConfigKeyId, uint8_t, bool);
-template void Driver::setConfigKeyValue<uint16_t>(ConfigKeyId, uint16_t, bool);
+template void Driver::setConfigKeyValue<bool>(uint32_t, bool, bool);
+template void Driver::setConfigKeyValue<uint8_t>(uint32_t, uint8_t, bool);
+template void Driver::setConfigKeyValue<uint16_t>(uint32_t, uint16_t, bool);
 
 void Driver::setPortEnabled(DevicePort port, bool state, bool persist)
 {
@@ -98,70 +98,6 @@ void Driver::setPortEnabled(DevicePort port, bool state, bool persist)
         case PORT_UART1: key_id = UART1_ENABLED; break;
         case PORT_UART2: key_id = UART2_ENABLED; break;
         case PORT_USB: key_id = USB_ENABLED; break;
-    }
-    setConfigKeyValue(key_id, state, persist);
-}
-
-static ConfigKeyId keyIdForProtocol(Driver::DeviceProtocol protocol,
-                                    const vector<ConfigKeyId> &keys)
-{
-    if (protocol == Driver::PROTOCOL_NMEA) return keys[0];
-    if (protocol == Driver::PROTOCOL_UBX) return keys[1];
-    return keys[2];
-}
-
-void Driver::setInputProtocol(DevicePort port, DeviceProtocol protocol, bool state, bool persist)
-{
-    ConfigKeyId key_id;
-    switch (port) {
-        case PORT_I2C:
-            key_id = keyIdForProtocol(protocol,
-                { I2C_IN_NMEA, I2C_IN_UBX, I2C_IN_RTCM3X });
-            break;
-        case PORT_SPI:
-            key_id = keyIdForProtocol(protocol,
-                { SPI_IN_NMEA, SPI_IN_UBX, SPI_IN_RTCM3X });
-            break;
-        case PORT_UART1:
-            key_id = keyIdForProtocol(protocol,
-                { UART1_IN_NMEA, UART1_IN_UBX, UART1_IN_RTCM3X });
-            break;
-        case PORT_UART2:
-            key_id = keyIdForProtocol(protocol,
-                { UART2_IN_NMEA, UART2_IN_UBX, UART2_IN_RTCM3X });
-            break;
-        case PORT_USB:
-            key_id = keyIdForProtocol(protocol,
-                { USB_IN_NMEA, USB_IN_UBX, USB_IN_RTCM3X });
-            break;
-    }
-    setConfigKeyValue(key_id, state, persist);
-}
-
-void Driver::setOutputProtocol(DevicePort port, DeviceProtocol protocol, bool state, bool persist)
-{
-    ConfigKeyId key_id;
-    switch (port) {
-        case PORT_I2C:
-            key_id = keyIdForProtocol(protocol,
-                { I2C_OUT_NMEA, I2C_OUT_UBX, I2C_OUT_RTCM3X });
-            break;
-        case PORT_SPI:
-            key_id = keyIdForProtocol(protocol,
-                { SPI_OUT_NMEA, SPI_OUT_UBX, SPI_OUT_RTCM3X });
-            break;
-        case PORT_UART1:
-            key_id = keyIdForProtocol(protocol,
-                { UART1_OUT_NMEA, UART1_OUT_UBX, UART1_OUT_RTCM3X });
-            break;
-        case PORT_UART2:
-            key_id = keyIdForProtocol(protocol,
-                { UART2_OUT_NMEA, UART2_OUT_UBX, UART2_OUT_RTCM3X });
-            break;
-        case PORT_USB:
-            key_id = keyIdForProtocol(protocol,
-                { USB_OUT_NMEA, USB_OUT_UBX, USB_OUT_RTCM3X });
-            break;
     }
     setConfigKeyValue(key_id, state, persist);
 }
@@ -222,4 +158,11 @@ void Driver::setMeasurementsPerSolutionRatio(uint16_t ratio, bool persist)
         throw std::invalid_argument("Maximum number of measurements per solution is 127");
     }
     setConfigKeyValue(RATE_NAV, ratio, persist);
+}
+
+void Driver::setPortProtocol(DevicePort port, DataDirection direction,
+                             DeviceProtocol protocol, bool state, bool persist)
+{
+    uint32_t key_id = port + direction + protocol;
+    setConfigKeyValue(key_id, state, persist);
 }
