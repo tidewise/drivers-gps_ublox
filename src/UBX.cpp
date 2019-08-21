@@ -2,9 +2,12 @@
 #include <stddef.h>
 
 #include <array>
+#include <sstream>
+#include <stdexcept>
 #include <vector>
 
 #include <gps_ublox/UBX.hpp>
+#include <gps_ublox/GPSData.hpp>
 
 using namespace std;
 using namespace gps_ublox;
@@ -103,6 +106,50 @@ void toLittleEndian(vector<uint8_t> &buffer, T value)
         buffer.push_back((bytes >> shifter) & 0xFF);
         shifter += 8;
     }
+}
+
+GPSData UBX::parsePvt(const vector<uint8_t> &payload) {
+    if (payload.size() != 92) {
+        std::stringstream ss;
+        ss << "Invalid PVT payload (invalid size = "
+           << payload.size() << ")";
+        throw std::invalid_argument(ss.str());
+    }
+
+    GPSData data;
+    data.time_of_week = fromLittleEndian<uint32_t>(&payload[0]);
+    data.year = fromLittleEndian<uint16_t>(&payload[4]);
+    data.month = fromLittleEndian<uint8_t>(&payload[6]);
+    data.day = fromLittleEndian<uint8_t>(&payload[7]);
+    data.hour = fromLittleEndian<uint8_t>(&payload[8]);
+    data.min = fromLittleEndian<uint8_t>(&payload[9]);
+    data.sec = fromLittleEndian<uint8_t>(&payload[10]);
+    data.valid = fromLittleEndian<uint8_t>(&payload[11]);
+    data.time_accuracy = fromLittleEndian<uint32_t>(&payload[12]);
+    data.fraction = fromLittleEndian<int32_t>(&payload[16]);
+    data.fix_type = fromLittleEndian<uint8_t>(&payload[20]);
+    data.fix_flags = fromLittleEndian<uint8_t>(&payload[21]);
+    data.additional_flags = fromLittleEndian<uint8_t>(&payload[22]);
+    data.num_sats = fromLittleEndian<uint8_t>(&payload[23]);
+    data.longitude = fromLittleEndian<int32_t>(&payload[24]);
+    data.latitude = fromLittleEndian<int32_t>(&payload[28]);
+    data.height = fromLittleEndian<int32_t>(&payload[32]);
+    data.height_above_mean_sea_level = fromLittleEndian<int32_t>(&payload[36]);
+    data.horizontal_accuracy = fromLittleEndian<uint32_t>(&payload[40]);
+    data.vertical_accuracy = fromLittleEndian<uint32_t>(&payload[44]);
+    data.vel_north = fromLittleEndian<int32_t>(&payload[48]);
+    data.vel_east = fromLittleEndian<int32_t>(&payload[52]);
+    data.vel_down = fromLittleEndian<int32_t>(&payload[56]);
+    data.ground_speed = fromLittleEndian<int32_t>(&payload[60]);
+    data.heading_of_motion = fromLittleEndian<int32_t>(&payload[64]);
+    data.speed_accuracy = fromLittleEndian<uint32_t>(&payload[68]);
+    data.heading_accuracy = fromLittleEndian<uint32_t>(&payload[72]);
+    data.position_dop = fromLittleEndian<uint16_t>(&payload[76]);
+    data.more_flags = fromLittleEndian<uint8_t>(&payload[78]);
+    data.heading_of_vehicle = fromLittleEndian<int32_t>(&payload[84]);
+    data.magnetic_declination = fromLittleEndian<int16_t>(&payload[88]);
+    data.magnetic_declination_accuracy = fromLittleEndian<uint16_t>(&payload[90]);
+    return data;
 }
 
 namespace gps_ublox {

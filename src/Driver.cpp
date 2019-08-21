@@ -1,4 +1,6 @@
 #include <gps_ublox/Driver.hpp>
+#include <gps_ublox/GPSData.hpp>
+#include <gps_ublox/BoardInfo.hpp>
 #include <base/Time.hpp>
 #include <iostream>
 #include <map>
@@ -28,6 +30,11 @@ BoardInfo Driver::readBoardInfo() {
         info.extensions.push_back(string(reinterpret_cast<char*>(&frame.payload[i])));
     }
     return info;
+}
+
+GPSData Driver::readGpsData() {
+    Frame frame = pollFrame(MSG_CLASS_NAV, MSG_ID_PVT);
+    return UBX::parsePvt(frame.payload);
 }
 
 Frame Driver::pollFrame(uint8_t class_id, uint8_t msg_id)

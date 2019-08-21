@@ -4,6 +4,7 @@
 #include <iodrivers_base/Driver.hpp>
 #include <gps_ublox/UBX.hpp>
 #include <gps_ublox/BoardInfo.hpp>
+#include <gps_ublox/GPSData.hpp>
 #include <stdexcept>
 
 namespace gps_ublox
@@ -176,6 +177,10 @@ namespace gps_ublox
              */
             void setPortProtocol(DevicePort port, DataDirection direction,
                                  DeviceProtocol protocol, bool state, bool persist = true);
+
+            /** Requests gps data
+             */
+            GPSData readGpsData();
     };
 
 } // end namespace gps_ublox

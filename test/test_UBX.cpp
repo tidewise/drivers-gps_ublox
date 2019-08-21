@@ -102,3 +102,89 @@ TEST_F(UBXTest, it_returns_a_valset_ram_layer_packet) {
     insertChecksum(buffer);
     ASSERT_EQ(buffer, packet);
 }
+
+template<typename T>
+void toLittleEndian(vector<uint8_t> &buffer, T value)
+{
+    uint8_t shifter = 0;
+    T bytes = reinterpret_cast<const T&>(value);
+    for (size_t i = 0; i < sizeof(T); i++) {
+        buffer.push_back((bytes >> shifter) & 0xFF);
+        shifter += 8;
+    }
+}
+
+TEST_F(UBXTest, it_parses_a_pvt_frame) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint32_t>(payload, 3600);
+    toLittleEndian<uint16_t>(payload, 2019);
+    toLittleEndian<uint8_t>(payload, 8);
+    toLittleEndian<uint8_t>(payload, 20);
+    toLittleEndian<uint8_t>(payload, 23);
+    toLittleEndian<uint8_t>(payload, 15);
+    toLittleEndian<uint8_t>(payload, 33);
+    toLittleEndian<uint8_t>(payload, 1);
+    toLittleEndian<uint32_t>(payload, 2860);
+    toLittleEndian<int32_t>(payload, 8215);
+    toLittleEndian<uint8_t>(payload, 4);
+    toLittleEndian<uint8_t>(payload, 2);
+    toLittleEndian<uint8_t>(payload, 3);
+    toLittleEndian<uint8_t>(payload, 24);
+    toLittleEndian<int32_t>(payload, 12000);
+    toLittleEndian<int32_t>(payload, 45000);
+    toLittleEndian<int32_t>(payload, 2200);
+    toLittleEndian<int32_t>(payload, 5000);
+    toLittleEndian<uint32_t>(payload, 130);
+    toLittleEndian<uint32_t>(payload, 270);
+    toLittleEndian<int32_t>(payload, 2300);
+    toLittleEndian<int32_t>(payload, 3300);
+    toLittleEndian<int32_t>(payload, 8400);
+    toLittleEndian<int32_t>(payload, 7700);
+    toLittleEndian<int32_t>(payload, 237);
+    toLittleEndian<uint32_t>(payload, 233);
+    toLittleEndian<uint32_t>(payload, 832);
+    toLittleEndian<uint16_t>(payload, 421);
+    toLittleEndian<uint8_t>(payload, 7);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<int32_t>(payload, 9300);
+    toLittleEndian<int16_t>(payload, 751);
+    toLittleEndian<uint16_t>(payload, 531);
+
+    GPSData data = UBX::parsePvt(payload);
+    ASSERT_EQ(3600, data.time_of_week);
+    ASSERT_EQ(2019, data.year);
+    ASSERT_EQ(8, data.month);
+    ASSERT_EQ(20, data.day);
+    ASSERT_EQ(23, data.hour);
+    ASSERT_EQ(15, data.min);
+    ASSERT_EQ(33, data.sec);
+    ASSERT_EQ(1, data.valid);
+    ASSERT_EQ(2860, data.time_accuracy);
+    ASSERT_EQ(8215, data.fraction);
+    ASSERT_EQ(4, data.fix_type);
+    ASSERT_EQ(2, data.fix_flags);
+    ASSERT_EQ(3, data.additional_flags);
+    ASSERT_EQ(24, data.num_sats);
+    ASSERT_EQ(12000, data.longitude);
+    ASSERT_EQ(45000, data.latitude);
+    ASSERT_EQ(2200, data.height);
+    ASSERT_EQ(5000, data.height_above_mean_sea_level);
+    ASSERT_EQ(130, data.horizontal_accuracy);
+    ASSERT_EQ(270, data.vertical_accuracy);
+    ASSERT_EQ(2300, data.vel_north);
+    ASSERT_EQ(3300, data.vel_east);
+    ASSERT_EQ(8400, data.vel_down);
+    ASSERT_EQ(7700, data.ground_speed);
+    ASSERT_EQ(237, data.heading_of_motion);
+    ASSERT_EQ(233, data.speed_accuracy);
+    ASSERT_EQ(832, data.heading_accuracy);
+    ASSERT_EQ(421, data.position_dop);
+    ASSERT_EQ(7, data.more_flags);
+    ASSERT_EQ(9300, data.heading_of_vehicle);
+    ASSERT_EQ(751, data.magnetic_declination);
+    ASSERT_EQ(531, data.magnetic_declination_accuracy);
+}

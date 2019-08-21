@@ -383,3 +383,15 @@ TEST_F(DriverTest, it_sets_number_of_measurments_per_solution) {
     EXPECT_REPLY(packet, reply);
     driver.setMeasurementsPerSolutionRatio(93, true);
 }
+
+TEST_F(DriverTest, it_requests_gps_data) {
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_NAV;
+    frame.msg_id = MSG_ID_PVT;
+    frame.payload.resize(92, 0);
+    vector<uint8_t> packet = Frame({ MSG_CLASS_NAV, MSG_ID_PVT }).toPacket();
+    vector<uint8_t> reply = frame.toPacket();
+    EXPECT_REPLY(packet, reply);
+    driver.readGpsData();
+}

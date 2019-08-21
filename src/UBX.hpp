@@ -7,6 +7,7 @@
 #include <array>
 #include <vector>
 
+#include <gps_ublox/GPSData.hpp>
 
 namespace gps_ublox
 {
@@ -32,7 +33,8 @@ namespace gps_ublox
         enum MsgClass {
             MSG_CLASS_ACK = 0x05,
             MSG_CLASS_CFG = 0x06,
-            MSG_CLASS_MON = 0x0A
+            MSG_CLASS_MON = 0x0A,
+            MSG_CLASS_NAV = 0x01
         };
 
         /** The message id enumeration
@@ -41,7 +43,8 @@ namespace gps_ublox
             MSG_ID_NACK = 0x00,
             MSG_ID_ACK = 0x01,
             MSG_ID_VALSET = 0x8A,
-            MSG_ID_VER = 0x04
+            MSG_ID_VER = 0x04,
+            MSG_ID_PVT = 0x07
         };
 
         /** The layer where a configuration data is stored
@@ -96,6 +99,8 @@ namespace gps_ublox
              */
             static Frame fromPacket(const uint8_t *buffer, size_t size);
         };
+
+        GPSData parsePvt(const std::vector<uint8_t> &payload);
 
         /** Implements iodrivers_base's extractPacket protocol
          *
