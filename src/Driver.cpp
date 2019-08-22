@@ -43,6 +43,11 @@ RFInfo Driver::readRFInfo() {
     return UBX::parseRF(frame.payload);
 }
 
+SignalInfo Driver::readSignalInfo() {
+    Frame frame = pollFrame(MSG_CLASS_NAV, MSG_ID_SIG);
+    return UBX::parseSIG(frame.payload);
+}
+
 Frame Driver::pollFrame(uint8_t class_id, uint8_t msg_id)
 {
     Frame frame = {

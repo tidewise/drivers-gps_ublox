@@ -6,6 +6,7 @@
 #include <gps_ublox/BoardInfo.hpp>
 #include <gps_ublox/GPSData.hpp>
 #include <gps_ublox/RFInfo.hpp>
+#include <gps_ublox/SignalInfo.hpp>
 #include <stdexcept>
 
 namespace gps_ublox
@@ -186,6 +187,10 @@ namespace gps_ublox
             /** Requests gps data
              */
             RFInfo readRFInfo();
+
+            /** Requests gps data
+             */
+            SignalInfo readSignalInfo();
     };
 
 } // end namespace gps_ublox

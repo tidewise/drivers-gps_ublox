@@ -408,3 +408,15 @@ TEST_F(DriverTest, it_requests_rf_info) {
     EXPECT_REPLY(packet, reply);
     driver.readRFInfo();
 }
+
+TEST_F(DriverTest, it_requests_sig_info) {
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_NAV;
+    frame.msg_id = MSG_ID_SIG;
+    frame.payload.resize(8, 0);
+    vector<uint8_t> packet = Frame({ MSG_CLASS_NAV, MSG_ID_SIG }).toPacket();
+    vector<uint8_t> reply = frame.toPacket();
+    EXPECT_REPLY(packet, reply);
+    driver.readSignalInfo();
+}

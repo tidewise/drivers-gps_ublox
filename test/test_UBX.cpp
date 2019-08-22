@@ -231,3 +231,43 @@ TEST_F(UBXTest, it_parses_an_rf_frame) {
     ASSERT_EQ(43, data.blocks[0].mag_q);
     ASSERT_EQ(15, data.blocks[1].block_id);
 }
+
+TEST_F(UBXTest, it_parses_a_sig_frame) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint32_t>(payload, 3600);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 2);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 0);
+
+    toLittleEndian<uint8_t>(payload, 25);
+    toLittleEndian<uint8_t>(payload, 21);
+    toLittleEndian<uint8_t>(payload, 53);
+    toLittleEndian<uint8_t>(payload, 43);
+    toLittleEndian<int16_t>(payload, 12);
+    toLittleEndian<uint8_t>(payload, 11);
+    toLittleEndian<uint8_t>(payload, 31);
+    toLittleEndian<uint8_t>(payload, 62);
+    toLittleEndian<uint8_t>(payload, 74);
+    toLittleEndian<int16_t>(payload, 112);
+
+    payload.resize(8 + (16 * 2));
+    payload[24] = 15;
+
+    SignalInfo data = UBX::parseSIG(payload);
+    ASSERT_EQ(3600, data.time_of_week);
+    ASSERT_EQ(0, data.version);
+    ASSERT_EQ(2, data.n_signals);
+
+    ASSERT_EQ(25, data.signals[0].gnss_id);
+    ASSERT_EQ(21, data.signals[0].satellite_id);
+    ASSERT_EQ(53, data.signals[0].signal_id);
+    ASSERT_EQ(43, data.signals[0].frequency_id);
+    ASSERT_EQ(12, data.signals[0].pseudorange_residual);
+    ASSERT_EQ(11, data.signals[0].signal_strength);
+    ASSERT_EQ(31, data.signals[0].quality_indicator);
+    ASSERT_EQ(62, data.signals[0].correction_source);
+    ASSERT_EQ(74, data.signals[0].ionospheric_model);
+    ASSERT_EQ(112, data.signals[0].signal_flags);
+    ASSERT_EQ(15, data.signals[1].gnss_id);
+}

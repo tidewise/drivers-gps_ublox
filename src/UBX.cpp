@@ -9,6 +9,7 @@
 #include <gps_ublox/UBX.hpp>
 #include <gps_ublox/GPSData.hpp>
 #include <gps_ublox/RFInfo.hpp>
+#include <gps_ublox/SignalInfo.hpp>
 
 using namespace std;
 using namespace gps_ublox;
@@ -141,6 +142,41 @@ RFInfo UBX::parseRF(const vector<uint8_t> &payload) {
         data.blocks[i].mag_i = payload[22 + (24 * i)];
         data.blocks[i].ofs_q = static_cast<int8_t>(payload[23 + (24 * i)]);
         data.blocks[i].mag_q = payload[24 + (24 * i)];
+    }
+    return data;
+}
+
+SignalInfo UBX::parseSIG(const vector<uint8_t> &payload) {
+    if (payload.size() < 8) {
+        std::stringstream ss("Invalid SIG payload (invalid size = ");
+        ss << payload.size() << ")";
+        throw std::invalid_argument(ss.str());
+    }
+
+    uint8_t n_signals = payload[5];
+    if (payload.size() != 8 + (n_signals * (unsigned int)16)) {
+        std::stringstream ss("Invalid RF payload (invalid size = ");
+        ss << payload.size() << ")";
+        throw std::invalid_argument(ss.str());
+    }
+
+    SignalInfo data;
+    data.time_of_week = fromLittleEndian<uint32_t>(&payload[0]);
+    data.version = payload[4];
+    data.n_signals = payload[5];
+    data.signals.resize(n_signals);
+
+    for (size_t i = 0; i < n_signals; i++) {
+        data.signals[i].gnss_id = payload[8 + (16 * i)];
+        data.signals[i].satellite_id = payload[9 + (16 * i)];
+        data.signals[i].signal_id = payload[10 + (16 * i)];
+        data.signals[i].frequency_id = payload[11 + (16 * i)];
+        data.signals[i].pseudorange_residual = fromLittleEndian<int16_t>(&payload[12 + (16 * i)]);
+        data.signals[i].signal_strength = payload[14 + (16 * i)];
+        data.signals[i].quality_indicator = payload[15 + (16 * i)];
+        data.signals[i].correction_source = payload[16 + (16 * i)];
+        data.signals[i].ionospheric_model = payload[17 + (16 * i)];
+        data.signals[i].signal_flags = fromLittleEndian<uint16_t>(&payload[18 + (16 * i)]);
     }
     return data;
 }
