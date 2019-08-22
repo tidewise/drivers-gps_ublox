@@ -154,7 +154,7 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
     toLittleEndian<int16_t>(payload, 751);
     toLittleEndian<uint16_t>(payload, 531);
 
-    GPSData data = UBX::parsePvt(payload);
+    GPSData data = UBX::parsePVT(payload);
     ASSERT_EQ(3600, data.time_of_week);
     ASSERT_EQ(2019, data.year);
     ASSERT_EQ(8, data.month);
@@ -187,4 +187,47 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
     ASSERT_EQ(9300, data.heading_of_vehicle);
     ASSERT_EQ(751, data.magnetic_declination);
     ASSERT_EQ(531, data.magnetic_declination_accuracy);
+}
+
+TEST_F(UBXTest, it_parses_an_rf_frame) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 2);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 12);
+    toLittleEndian<uint8_t>(payload, 33);
+    toLittleEndian<uint8_t>(payload, 1);
+    toLittleEndian<uint8_t>(payload, 2);
+    toLittleEndian<uint32_t>(payload, 1266);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint16_t>(payload, 25);
+    toLittleEndian<uint16_t>(payload, 76);
+    toLittleEndian<uint8_t>(payload, 25);
+    toLittleEndian<int8_t>(payload, 87);
+    toLittleEndian<uint8_t>(payload, 53);
+    toLittleEndian<int8_t>(payload, 92);
+    toLittleEndian<uint8_t>(payload, 43);
+    payload.resize(4 + (24 * 2));
+    payload[28] = 15;
+
+    RFInfo data = UBX::parseRF(payload);
+    ASSERT_EQ(0, data.version);
+    ASSERT_EQ(2, data.n_blocks);
+    ASSERT_EQ(12, data.blocks[0].block_id);
+    ASSERT_EQ(33, data.blocks[0].flags);
+    ASSERT_EQ(1, data.blocks[0].antenna_status);
+    ASSERT_EQ(2, data.blocks[0].antenna_power);
+    ASSERT_EQ(1266, data.blocks[0].post_status);
+    ASSERT_EQ(25, data.blocks[0].noise_per_measurement);
+    ASSERT_EQ(76, data.blocks[0].agc_count);
+    ASSERT_EQ(25, data.blocks[0].jamming_indicator);
+    ASSERT_EQ(87, data.blocks[0].ofs_i);
+    ASSERT_EQ(53, data.blocks[0].mag_i);
+    ASSERT_EQ(92, data.blocks[0].ofs_q);
+    ASSERT_EQ(43, data.blocks[0].mag_q);
+    ASSERT_EQ(15, data.blocks[1].block_id);
 }

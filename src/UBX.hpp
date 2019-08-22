@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <gps_ublox/GPSData.hpp>
+#include <gps_ublox/RFInfo.hpp>
 
 namespace gps_ublox
 {
@@ -44,7 +45,8 @@ namespace gps_ublox
             MSG_ID_ACK = 0x01,
             MSG_ID_VALSET = 0x8A,
             MSG_ID_VER = 0x04,
-            MSG_ID_PVT = 0x07
+            MSG_ID_PVT = 0x07,
+            MSG_ID_RF = 0x38
         };
 
         /** The layer where a configuration data is stored
@@ -100,7 +102,16 @@ namespace gps_ublox
             static Frame fromPacket(const uint8_t *buffer, size_t size);
         };
 
-        GPSData parsePvt(const std::vector<uint8_t> &payload);
+        /**
+         * Parses an UBX-NAV-PVT payload
+         */
+        GPSData parsePVT(const std::vector<uint8_t> &payload);
+
+        /**
+         * Parses an UBX-MON-RF payload
+         */
+        RFInfo parseRF(const std::vector<uint8_t> &payload);
+
 
         /** Implements iodrivers_base's extractPacket protocol
          *

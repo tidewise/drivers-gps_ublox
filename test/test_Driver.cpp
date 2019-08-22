@@ -8,6 +8,7 @@
 #include <gps_ublox/UBX.hpp>
 #include <gps_ublox/Driver.hpp>
 #include <gps_ublox/BoardInfo.hpp>
+#include <gps_ublox/RFInfo.hpp>
 #include <iodrivers_base/FixtureGTest.hpp>
 
 using namespace std;
@@ -393,5 +394,17 @@ TEST_F(DriverTest, it_requests_gps_data) {
     vector<uint8_t> packet = Frame({ MSG_CLASS_NAV, MSG_ID_PVT }).toPacket();
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
-    driver.readGpsData();
+    driver.readGPSData();
+}
+
+TEST_F(DriverTest, it_requests_rf_info) {
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_MON;
+    frame.msg_id = MSG_ID_RF;
+    frame.payload.resize(4, 0);
+    vector<uint8_t> packet = Frame({ MSG_CLASS_MON, MSG_ID_RF }).toPacket();
+    vector<uint8_t> reply = frame.toPacket();
+    EXPECT_REPLY(packet, reply);
+    driver.readRFInfo();
 }

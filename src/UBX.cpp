@@ -8,6 +8,7 @@
 
 #include <gps_ublox/UBX.hpp>
 #include <gps_ublox/GPSData.hpp>
+#include <gps_ublox/RFInfo.hpp>
 
 using namespace std;
 using namespace gps_ublox;
@@ -108,7 +109,43 @@ void toLittleEndian(vector<uint8_t> &buffer, T value)
     }
 }
 
-GPSData UBX::parsePvt(const vector<uint8_t> &payload) {
+RFInfo UBX::parseRF(const vector<uint8_t> &payload) {
+    if (payload.size() < 4) {
+        std::stringstream ss("Invalid RF payload (invalid size = ");
+        ss << payload.size() << ")";
+        throw std::invalid_argument(ss.str());
+    }
+
+    uint8_t n_blocks = payload[1];
+    if (payload.size() != 4 + (n_blocks * (unsigned int)24)) {
+        std::stringstream ss("Invalid RF payload (invalid size = ");
+        ss << payload.size() << ")";
+        throw std::invalid_argument(ss.str());
+    }
+
+    RFInfo data;
+    data.version = payload[0];
+    data.n_blocks = payload[1];
+    data.blocks.resize(n_blocks);
+
+    for (size_t i = 0; i < n_blocks; i++) {
+        data.blocks[i].block_id = payload[4 + (24 * i)];
+        data.blocks[i].flags = payload[5 + (24 * i)];
+        data.blocks[i].antenna_status = payload[6 + (24 * i)];
+        data.blocks[i].antenna_power = payload[7 + (24 * i)];
+        data.blocks[i].post_status = fromLittleEndian<uint32_t>(&payload[8 + (24 * i)]);
+        data.blocks[i].noise_per_measurement = fromLittleEndian<uint16_t>(&payload[16 + (24 * i)]);
+        data.blocks[i].agc_count = fromLittleEndian<uint16_t>(&payload[18 + (24 * i)]);
+        data.blocks[i].jamming_indicator = payload[20 + (24 * i)];
+        data.blocks[i].ofs_i = static_cast<int8_t>(payload[21 + (24 * i)]);
+        data.blocks[i].mag_i = payload[22 + (24 * i)];
+        data.blocks[i].ofs_q = static_cast<int8_t>(payload[23 + (24 * i)]);
+        data.blocks[i].mag_q = payload[24 + (24 * i)];
+    }
+    return data;
+}
+
+GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
     if (payload.size() != 92) {
         std::stringstream ss;
         ss << "Invalid PVT payload (invalid size = "
