@@ -415,6 +415,36 @@ TEST_F(DriverTest, it_sets_the_dynamic_platform_model) {
     driver.setDynamicModel(UBX::AUTOMOTIVE, true);
 }
 
+TEST_F(DriverTest, it_sets_the_speed_threshold) {
+    IODRIVERS_BASE_MOCK();
+
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
+
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(MOT_GNSSSPEED_THRS, 5, true);
+    vector<uint8_t> reply = frame.toPacket();
+    EXPECT_REPLY(packet, reply);
+    driver.setSpeedThreshold(5, true);
+}
+
+TEST_F(DriverTest, it_sets_the_distance_threshold) {
+    IODRIVERS_BASE_MOCK();
+
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
+
+    vector<uint8_t> packet = getConfigValueSetPacket<uint16_t>(MOT_GNSSDIST_THRS, 3, true);
+    vector<uint8_t> reply = frame.toPacket();
+    EXPECT_REPLY(packet, reply);
+    driver.setStaticHoldDistanceThreshold(3, true);
+}
+
 TEST_F(DriverTest, it_requests_gps_data) {
     IODRIVERS_BASE_MOCK();
     Frame frame;

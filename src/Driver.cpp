@@ -196,3 +196,13 @@ void Driver::setDynamicModel(DynamicModel model, bool persist)
     uint32_t key_id = NAVSPG_DYNMODEL;
     setConfigKeyValue(key_id, static_cast<uint8_t>(model), persist);
 }
+
+void Driver::setSpeedThreshold(uint8_t speed, bool persist)
+{
+    setConfigKeyValue(MOT_GNSSSPEED_THRS, speed, persist);
+}
+
+void Driver::setStaticHoldDistanceThreshold(uint16_t distance, bool persist)
+{
+    setConfigKeyValue(MOT_GNSSDIST_THRS, distance, persist);
+}

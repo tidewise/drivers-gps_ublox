@@ -179,6 +179,22 @@ namespace gps_ublox
              */
             void setDynamicModel(UBX::DynamicModel model, bool persist = true);
 
+            /** Sets GNSS speed threshold below which platform is considered as
+             * stationary (a.k.a. static hold threshold)
+             *
+             * @param speed Speed, in m/s
+             * @param persist Whether the configuration should be persisted
+             */
+            void setSpeedThreshold(uint8_t speed, bool persist = true);
+
+            /** Sets distance above which GNSS- based stationary motion is exit
+             * (a. k.a. static hold distance threshold)
+             *
+             * @param distance Distance
+             * @param persist Whether the configuration should be persisted
+             */
+            void setStaticHoldDistanceThreshold(uint16_t distance, bool persist = true);
+
             /** Requests device version information
              */
             BoardInfo readBoardInfo();

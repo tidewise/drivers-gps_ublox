@@ -102,7 +102,9 @@ namespace gps_ublox
             RATE_MEAS = 0x30210001,
             RATE_NAV = 0x30210002,
             RATE_TIMEREF = 0x20210003,
-            NAVSPG_DYNMODEL = 0x20110021
+            NAVSPG_DYNMODEL = 0x20110021,
+            MOT_GNSSSPEED_THRS = 0x20250038,
+            MOT_GNSSDIST_THRS = 0x3025003b
         };
 
         /** Represents an UBX binary data frame
