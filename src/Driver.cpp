@@ -184,3 +184,9 @@ void Driver::setPortProtocol(DevicePort port, DataDirection direction,
     uint32_t key_id = port + direction + protocol;
     setConfigKeyValue(key_id, state, persist);
 }
+
+void Driver::setTimeSystem(TimeSystem system, bool persist)
+{
+    uint32_t key_id = RATE_TIMEREF;
+    setConfigKeyValue(key_id, static_cast<uint8_t>(system), persist);
+}

@@ -165,6 +165,13 @@ namespace gps_ublox
              */
             void setMeasurementsPerSolutionRatio(uint16_t ratio, bool persist = true);
 
+            /** Sets the time system to which measurements are aligned
+             *
+             * @param systek Time system
+             * @param persist Whether the configuration should be persisted
+             */
+            void setTimeSystem(UBX::TimeSystem system, bool persist = true);
+
             /** Requests device version information
              */
             BoardInfo readBoardInfo();

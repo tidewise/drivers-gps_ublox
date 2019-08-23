@@ -60,6 +60,16 @@ namespace gps_ublox
             LAYER_ALL = 7
         };
 
+        /** Time systems used to align measurements
+         */
+        enum TimeSystem {
+            UTC = 0,
+            GPS = 1,
+            GLONASS = 2,
+            BEIDOU = 3,
+            GALILEO = 4
+        };
+
         /** The unique key id of a configuration value
          */
         enum ConfigKeyId {
@@ -78,7 +88,8 @@ namespace gps_ublox
             ODO_VELLPGAIN = 0x20220031,
             ODO_COGLPGAIN = 0x20220032,
             RATE_MEAS = 0x30210001,
-            RATE_NAV = 0x30210002
+            RATE_NAV = 0x30210002,
+            RATE_TIMEREF = 0x20210003
         };
 
         /** Represents an UBX binary data frame
