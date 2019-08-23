@@ -66,10 +66,20 @@ int main(int argc, char** argv)
     string cmd(argv[2]);
 
     Driver driver;
-    driver.setReadTimeout(base::Time::fromMilliseconds(100));
-    driver.setWriteTimeout(base::Time::fromMilliseconds(100));
+    driver.setReadTimeout(base::Time::fromMilliseconds(1000));
+    driver.setWriteTimeout(base::Time::fromMilliseconds(1000));
 
-    if (cmd == "enable-port") {
+    if (cmd == "info") {
+        driver.openURI(uri);
+        auto info = driver.readBoardInfo();
+        cout << "SW: " << info.software_version << "\n"
+             << "HW: " << info.hardware_version << "\n";
+        for (auto ext: info.extensions) {
+            cout << ext << "\n";
+        }
+        cout << flush;
+    }
+    else if (cmd == "enable-port") {
         if (argc == 3) {
             printPorts();
             return 0;
