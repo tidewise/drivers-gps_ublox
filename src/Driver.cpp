@@ -190,3 +190,9 @@ void Driver::setTimeSystem(TimeSystem system, bool persist)
     uint32_t key_id = RATE_TIMEREF;
     setConfigKeyValue(key_id, static_cast<uint8_t>(system), persist);
 }
+
+void Driver::setDynamicModel(DynamicModel model, bool persist)
+{
+    uint32_t key_id = NAVSPG_DYNMODEL;
+    setConfigKeyValue(key_id, static_cast<uint8_t>(model), persist);
+}

@@ -167,10 +167,17 @@ namespace gps_ublox
 
             /** Sets the time system to which measurements are aligned
              *
-             * @param systek Time system
+             * @param system Time system
              * @param persist Whether the configuration should be persisted
              */
             void setTimeSystem(UBX::TimeSystem system, bool persist = true);
+
+            /** Sets the dynamic platform model
+             *
+             * @param model Dynamic platform model
+             * @param persist Whether the configuration should be persisted
+             */
+            void setDynamicModel(UBX::DynamicModel model, bool persist = true);
 
             /** Requests device version information
              */

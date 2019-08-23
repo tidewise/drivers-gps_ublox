@@ -70,6 +70,18 @@ namespace gps_ublox
             GALILEO = 4
         };
 
+        enum DynamicModel {
+            PORT = 0,
+            STATATIONARY = 2,
+            PEDESTRIAN = 3,
+            AUTOMOTIVE = 4,
+            SEA = 5,
+            AIR_1 = 6, // Airborne with <1g acceleration
+            AIR_2 = 7, // Airborne with <2g acceleration
+            AIR_4 = 8, // Airborne with <4g acceleration
+            WRIST = 9 // Wrist worn watch
+        };
+
         /** The unique key id of a configuration value
          */
         enum ConfigKeyId {
@@ -89,7 +101,8 @@ namespace gps_ublox
             ODO_COGLPGAIN = 0x20220032,
             RATE_MEAS = 0x30210001,
             RATE_NAV = 0x30210002,
-            RATE_TIMEREF = 0x20210003
+            RATE_TIMEREF = 0x20210003,
+            NAVSPG_DYNMODEL = 0x20110021
         };
 
         /** Represents an UBX binary data frame

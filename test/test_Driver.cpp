@@ -400,6 +400,21 @@ TEST_F(DriverTest, it_sets_the_time_system_used_to_aligh_measurements) {
     driver.setTimeSystem(UBX::GLONASS, true);
 }
 
+TEST_F(DriverTest, it_sets_the_dynamic_platform_model) {
+    IODRIVERS_BASE_MOCK();
+
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
+
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(NAVSPG_DYNMODEL, 4, true);
+    vector<uint8_t> reply = frame.toPacket();
+    EXPECT_REPLY(packet, reply);
+    driver.setDynamicModel(UBX::AUTOMOTIVE, true);
+}
+
 TEST_F(DriverTest, it_requests_gps_data) {
     IODRIVERS_BASE_MOCK();
     Frame frame;
