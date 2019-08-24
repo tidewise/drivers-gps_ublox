@@ -8,7 +8,29 @@ namespace gps_ublox {
     /**
      * Information for each RF block
      */
+
     struct RFInfo {
+        enum AntennaStatus {
+            ANTENNA_INIT = 0x00,
+            ANTENNA_STATUS_UNKNOWN = 0x01,
+            ANTENNA_OK = 0x02,
+            ANTENNA_SHORT = 0x03,
+            ANTENNA_OPEN = 0x04
+        };
+
+        enum AntennaPower {
+            ANTENNA_OFF = 0x00,
+            ANTENNA_ON = 0x01,
+            ANTENNA_POWER_UNKNOWN = 0x02
+        };
+
+        enum JammingState {
+            JAMMING_UNKNOWN = 0,
+            JAMMING_OK = 1,
+            JAMMING_WARNING = 2,
+            JAMMING_CRITICAL = 3
+        };
+
         uint8_t version;
         uint8_t n_blocks;
 
@@ -17,9 +39,9 @@ namespace gps_ublox {
          */
         struct Data {
             uint8_t block_id;
-            uint8_t flags;
-            uint8_t antenna_status;
-            uint8_t antenna_power;
+            JammingState jamming_state;
+            AntennaStatus antenna_status;
+            AntennaPower antenna_power;
             uint32_t post_status;
             uint16_t noise_per_measurement;
             uint16_t agc_count;

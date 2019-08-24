@@ -9,7 +9,7 @@ namespace gps_ublox {
      * Signal information
      */
     struct SignalInfo {
-        uint32_t time_of_week;
+        uint32_t time_of_week;  // in ms
         uint8_t version;
         uint8_t n_signals;
 
@@ -21,8 +21,8 @@ namespace gps_ublox {
             uint8_t satellite_id;
             uint8_t signal_id;
             uint8_t frequency_id;
-            int16_t pseudorange_residual;
-            uint16_t signal_strength;
+            int16_t pseudorange_residual;  // in m
+            uint16_t signal_strength;  // in dBHz
             uint8_t quality_indicator;
             uint8_t correction_source;
             uint8_t ionospheric_model;

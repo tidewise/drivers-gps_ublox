@@ -131,9 +131,9 @@ RFInfo UBX::parseRF(const vector<uint8_t> &payload) {
 
     for (size_t i = 0; i < n_blocks; i++) {
         data.blocks[i].block_id = payload[4 + (24 * i)];
-        data.blocks[i].flags = payload[5 + (24 * i)];
-        data.blocks[i].antenna_status = payload[6 + (24 * i)];
-        data.blocks[i].antenna_power = payload[7 + (24 * i)];
+        data.blocks[i].jamming_state = static_cast<RFInfo::JammingState>(0x03 & payload[5 + (24 * i)]);
+        data.blocks[i].antenna_status = static_cast<RFInfo::AntennaStatus>(payload[6 + (24 * i)]);
+        data.blocks[i].antenna_power = static_cast<RFInfo::AntennaPower>(payload[7 + (24 * i)]);
         data.blocks[i].post_status = fromLittleEndian<uint32_t>(&payload[8 + (24 * i)]);
         data.blocks[i].noise_per_measurement = fromLittleEndian<uint16_t>(&payload[16 + (24 * i)]);
         data.blocks[i].agc_count = fromLittleEndian<uint16_t>(&payload[18 + (24 * i)]);
@@ -171,7 +171,7 @@ SignalInfo UBX::parseSIG(const vector<uint8_t> &payload) {
         data.signals[i].satellite_id = payload[9 + (16 * i)];
         data.signals[i].signal_id = payload[10 + (16 * i)];
         data.signals[i].frequency_id = payload[11 + (16 * i)];
-        data.signals[i].pseudorange_residual = fromLittleEndian<int16_t>(&payload[12 + (16 * i)]);
+        data.signals[i].pseudorange_residual = fromLittleEndian<int16_t>(&payload[12 + (16 * i)]) * 0.1;
         data.signals[i].signal_strength = payload[14 + (16 * i)];
         data.signals[i].quality_indicator = payload[15 + (16 * i)];
         data.signals[i].correction_source = payload[16 + (16 * i)];
@@ -191,37 +191,43 @@ GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
 
     GPSData data;
     data.time_of_week = fromLittleEndian<uint32_t>(&payload[0]);
-    data.year = fromLittleEndian<uint16_t>(&payload[4]);
-    data.month = fromLittleEndian<uint8_t>(&payload[6]);
-    data.day = fromLittleEndian<uint8_t>(&payload[7]);
-    data.hour = fromLittleEndian<uint8_t>(&payload[8]);
-    data.min = fromLittleEndian<uint8_t>(&payload[9]);
-    data.sec = fromLittleEndian<uint8_t>(&payload[10]);
+    data.time = base::Time::fromTimeValues(
+        fromLittleEndian<uint16_t>(&payload[4]),
+        fromLittleEndian<uint8_t>(&payload[6]),
+        fromLittleEndian<uint8_t>(&payload[7]),
+        fromLittleEndian<uint8_t>(&payload[8]),
+        fromLittleEndian<uint8_t>(&payload[9]),
+        fromLittleEndian<uint8_t>(&payload[10]),
+        0,
+        0);
+
+    int32_t fraction = fromLittleEndian<int32_t>(&payload[16]); // in nanoseconds
+    data.time = data.time + base::Time::fromMicroseconds((double)fraction / 1000.0);
+
     data.valid = fromLittleEndian<uint8_t>(&payload[11]);
     data.time_accuracy = fromLittleEndian<uint32_t>(&payload[12]);
-    data.fraction = fromLittleEndian<int32_t>(&payload[16]);
-    data.fix_type = fromLittleEndian<uint8_t>(&payload[20]);
+    data.fix_type = static_cast<GPSData::GNSSFixType>(fromLittleEndian<uint8_t>(&payload[20]));
     data.fix_flags = fromLittleEndian<uint8_t>(&payload[21]);
     data.additional_flags = fromLittleEndian<uint8_t>(&payload[22]);
     data.num_sats = fromLittleEndian<uint8_t>(&payload[23]);
-    data.longitude = fromLittleEndian<int32_t>(&payload[24]);
-    data.latitude = fromLittleEndian<int32_t>(&payload[28]);
-    data.height = fromLittleEndian<int32_t>(&payload[32]);
-    data.height_above_mean_sea_level = fromLittleEndian<int32_t>(&payload[36]);
-    data.horizontal_accuracy = fromLittleEndian<uint32_t>(&payload[40]);
-    data.vertical_accuracy = fromLittleEndian<uint32_t>(&payload[44]);
-    data.vel_north = fromLittleEndian<int32_t>(&payload[48]);
-    data.vel_east = fromLittleEndian<int32_t>(&payload[52]);
-    data.vel_down = fromLittleEndian<int32_t>(&payload[56]);
-    data.ground_speed = fromLittleEndian<int32_t>(&payload[60]);
-    data.heading_of_motion = fromLittleEndian<int32_t>(&payload[64]);
-    data.speed_accuracy = fromLittleEndian<uint32_t>(&payload[68]);
-    data.heading_accuracy = fromLittleEndian<uint32_t>(&payload[72]);
-    data.position_dop = fromLittleEndian<uint16_t>(&payload[76]);
+    data.longitude = (double)fromLittleEndian<int32_t>(&payload[24]) * 1e-7;
+    data.latitude = (double)fromLittleEndian<int32_t>(&payload[28]) * 1e-7;
+    data.height = (double)fromLittleEndian<int32_t>(&payload[32]) / 1000.0;
+    data.height_above_mean_sea_level = (double)fromLittleEndian<int32_t>(&payload[36]) / 1000.0;
+    data.horizontal_accuracy = (double)fromLittleEndian<uint32_t>(&payload[40]) / 1000.0;
+    data.vertical_accuracy = (double)fromLittleEndian<uint32_t>(&payload[44]) / 1000.0;
+    data.vel_north = (double)fromLittleEndian<int32_t>(&payload[48]) / 1000.0;
+    data.vel_east = (double)fromLittleEndian<int32_t>(&payload[52]) / 1000.0;
+    data.vel_down = (double)fromLittleEndian<int32_t>(&payload[56]) / 1000.0;
+    data.ground_speed = (double)fromLittleEndian<int32_t>(&payload[60]) / 1000.0;
+    data.heading_of_motion = (double)fromLittleEndian<int32_t>(&payload[64]) * 1e-5;
+    data.speed_accuracy = (double)fromLittleEndian<uint32_t>(&payload[68]) / 1000.0;
+    data.heading_accuracy = (double)fromLittleEndian<uint32_t>(&payload[72]) * 1e-5;
+    data.position_dop = (double)fromLittleEndian<uint16_t>(&payload[76]) * 0.01;
     data.more_flags = fromLittleEndian<uint8_t>(&payload[78]);
-    data.heading_of_vehicle = fromLittleEndian<int32_t>(&payload[84]);
-    data.magnetic_declination = fromLittleEndian<int16_t>(&payload[88]);
-    data.magnetic_declination_accuracy = fromLittleEndian<uint16_t>(&payload[90]);
+    data.heading_of_vehicle = (double)fromLittleEndian<int32_t>(&payload[84]) * 1e-5;
+    data.magnetic_declination = (double)fromLittleEndian<int16_t>(&payload[88]) * 1e-2;
+    data.magnetic_declination_accuracy = (double)fromLittleEndian<uint16_t>(&payload[90]) * 1e-2;
     return data;
 }
 

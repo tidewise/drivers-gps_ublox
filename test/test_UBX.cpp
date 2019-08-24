@@ -125,68 +125,62 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
     toLittleEndian<uint8_t>(payload, 33);
     toLittleEndian<uint8_t>(payload, 1);
     toLittleEndian<uint32_t>(payload, 2860);
-    toLittleEndian<int32_t>(payload, 8215);
+    toLittleEndian<int32_t>(payload, -1000);
     toLittleEndian<uint8_t>(payload, 4);
     toLittleEndian<uint8_t>(payload, 2);
     toLittleEndian<uint8_t>(payload, 3);
-    toLittleEndian<uint8_t>(payload, 24);
-    toLittleEndian<int32_t>(payload, 12000);
-    toLittleEndian<int32_t>(payload, 45000);
-    toLittleEndian<int32_t>(payload, 2200);
-    toLittleEndian<int32_t>(payload, 5000);
-    toLittleEndian<uint32_t>(payload, 130);
-    toLittleEndian<uint32_t>(payload, 270);
-    toLittleEndian<int32_t>(payload, 2300);
-    toLittleEndian<int32_t>(payload, 3300);
-    toLittleEndian<int32_t>(payload, 8400);
-    toLittleEndian<int32_t>(payload, 7700);
-    toLittleEndian<int32_t>(payload, 237);
-    toLittleEndian<uint32_t>(payload, 233);
-    toLittleEndian<uint32_t>(payload, 832);
-    toLittleEndian<uint16_t>(payload, 421);
-    toLittleEndian<uint8_t>(payload, 7);
+    toLittleEndian<uint8_t>(payload, 24);  // n_sats
+    toLittleEndian<int32_t>(payload, 1202200000);  // latitude
+    toLittleEndian<int32_t>(payload, 453000000);  // longitude
+    toLittleEndian<int32_t>(payload, 2200);  // height
+    toLittleEndian<int32_t>(payload, 5000);  // height above mean sea level
+    toLittleEndian<uint32_t>(payload, 130);  // horizontal accuracy
+    toLittleEndian<uint32_t>(payload, 270);  // vertical accuracy
+    toLittleEndian<int32_t>(payload, 2300);  // vel_n
+    toLittleEndian<int32_t>(payload, 3300);  // vel_e
+    toLittleEndian<int32_t>(payload, 8400);  // vel_d
+    toLittleEndian<int32_t>(payload, 7700);  // ground speed
+    toLittleEndian<int32_t>(payload, 2370000);  // heading of motion
+    toLittleEndian<uint32_t>(payload, 233);  // speed accuracy
+    toLittleEndian<uint32_t>(payload, 83200);  // heading accuracy
+    toLittleEndian<uint16_t>(payload, 421);  // position dop
+    toLittleEndian<uint8_t>(payload, 7);  // additional flags
     toLittleEndian<uint8_t>(payload, 0);
     toLittleEndian<uint8_t>(payload, 0);
     toLittleEndian<uint8_t>(payload, 0);
     toLittleEndian<uint8_t>(payload, 0);
     toLittleEndian<uint8_t>(payload, 0);
-    toLittleEndian<int32_t>(payload, 9300);
-    toLittleEndian<int16_t>(payload, 751);
-    toLittleEndian<uint16_t>(payload, 531);
+    toLittleEndian<int32_t>(payload, 93000);  // heading of vehicle
+    toLittleEndian<int16_t>(payload, 751);  // magnetic declination
+    toLittleEndian<uint16_t>(payload, 531);  // magnetic declination accuracy
 
     GPSData data = UBX::parsePVT(payload);
     ASSERT_EQ(3600, data.time_of_week);
-    ASSERT_EQ(2019, data.year);
-    ASSERT_EQ(8, data.month);
-    ASSERT_EQ(20, data.day);
-    ASSERT_EQ(23, data.hour);
-    ASSERT_EQ(15, data.min);
-    ASSERT_EQ(33, data.sec);
+    ASSERT_EQ(base::Time::fromTimeValues(2019, 8, 20, 23, 15, 32, 999, 999), data.time);
     ASSERT_EQ(1, data.valid);
     ASSERT_EQ(2860, data.time_accuracy);
-    ASSERT_EQ(8215, data.fraction);
-    ASSERT_EQ(4, data.fix_type);
+    ASSERT_FLOAT_EQ(GPSData::GNSS_PLUS_DEAD_RECKONING, data.fix_type);
     ASSERT_EQ(2, data.fix_flags);
     ASSERT_EQ(3, data.additional_flags);
     ASSERT_EQ(24, data.num_sats);
-    ASSERT_EQ(12000, data.longitude);
-    ASSERT_EQ(45000, data.latitude);
-    ASSERT_EQ(2200, data.height);
-    ASSERT_EQ(5000, data.height_above_mean_sea_level);
-    ASSERT_EQ(130, data.horizontal_accuracy);
-    ASSERT_EQ(270, data.vertical_accuracy);
-    ASSERT_EQ(2300, data.vel_north);
-    ASSERT_EQ(3300, data.vel_east);
-    ASSERT_EQ(8400, data.vel_down);
-    ASSERT_EQ(7700, data.ground_speed);
-    ASSERT_EQ(237, data.heading_of_motion);
-    ASSERT_EQ(233, data.speed_accuracy);
-    ASSERT_EQ(832, data.heading_accuracy);
-    ASSERT_EQ(421, data.position_dop);
-    ASSERT_EQ(7, data.more_flags);
-    ASSERT_EQ(9300, data.heading_of_vehicle);
-    ASSERT_EQ(751, data.magnetic_declination);
-    ASSERT_EQ(531, data.magnetic_declination_accuracy);
+    ASSERT_FLOAT_EQ(120.22, data.longitude);
+    ASSERT_FLOAT_EQ(45.3, data.latitude);
+    ASSERT_FLOAT_EQ(2.2, data.height);
+    ASSERT_FLOAT_EQ(5.0, data.height_above_mean_sea_level);
+    ASSERT_FLOAT_EQ(0.13, data.horizontal_accuracy);
+    ASSERT_FLOAT_EQ(0.27, data.vertical_accuracy);
+    ASSERT_FLOAT_EQ(2.3, data.vel_north);
+    ASSERT_FLOAT_EQ(3.3, data.vel_east);
+    ASSERT_FLOAT_EQ(8.4, data.vel_down);
+    ASSERT_FLOAT_EQ(7.7, data.ground_speed);
+    ASSERT_FLOAT_EQ(23.7, data.heading_of_motion);
+    ASSERT_FLOAT_EQ(0.233, data.speed_accuracy);
+    ASSERT_FLOAT_EQ(0.832, data.heading_accuracy);
+    ASSERT_FLOAT_EQ(4.21, data.position_dop);
+    ASSERT_FLOAT_EQ(7, data.more_flags);
+    ASSERT_FLOAT_EQ(0.93, data.heading_of_vehicle);
+    ASSERT_FLOAT_EQ(7.51, data.magnetic_declination);
+    ASSERT_FLOAT_EQ(5.31, data.magnetic_declination_accuracy);
 }
 
 TEST_F(UBXTest, it_parses_an_rf_frame) {
@@ -196,7 +190,7 @@ TEST_F(UBXTest, it_parses_an_rf_frame) {
     toLittleEndian<uint8_t>(payload, 0);
     toLittleEndian<uint8_t>(payload, 0);
     toLittleEndian<uint8_t>(payload, 12);
-    toLittleEndian<uint8_t>(payload, 33);
+    toLittleEndian<uint8_t>(payload, 01);
     toLittleEndian<uint8_t>(payload, 1);
     toLittleEndian<uint8_t>(payload, 2);
     toLittleEndian<uint32_t>(payload, 1266);
@@ -218,9 +212,9 @@ TEST_F(UBXTest, it_parses_an_rf_frame) {
     ASSERT_EQ(0, data.version);
     ASSERT_EQ(2, data.n_blocks);
     ASSERT_EQ(12, data.blocks[0].block_id);
-    ASSERT_EQ(33, data.blocks[0].flags);
-    ASSERT_EQ(1, data.blocks[0].antenna_status);
-    ASSERT_EQ(2, data.blocks[0].antenna_power);
+    ASSERT_EQ(RFInfo::JAMMING_OK, data.blocks[0].jamming_state);
+    ASSERT_EQ(RFInfo::ANTENNA_STATUS_UNKNOWN, data.blocks[0].antenna_status);
+    ASSERT_EQ(RFInfo::ANTENNA_POWER_UNKNOWN, data.blocks[0].antenna_power);
     ASSERT_EQ(1266, data.blocks[0].post_status);
     ASSERT_EQ(25, data.blocks[0].noise_per_measurement);
     ASSERT_EQ(76, data.blocks[0].agc_count);
@@ -244,7 +238,7 @@ TEST_F(UBXTest, it_parses_a_sig_frame) {
     toLittleEndian<uint8_t>(payload, 21);
     toLittleEndian<uint8_t>(payload, 53);
     toLittleEndian<uint8_t>(payload, 43);
-    toLittleEndian<int16_t>(payload, 12);
+    toLittleEndian<int16_t>(payload, 120);
     toLittleEndian<uint8_t>(payload, 11);
     toLittleEndian<uint8_t>(payload, 31);
     toLittleEndian<uint8_t>(payload, 62);
