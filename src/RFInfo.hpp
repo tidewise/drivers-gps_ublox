@@ -36,6 +36,15 @@ namespace gps_ublox {
 
         /**
          * The actual RF info
+         *
+         * Status of different aspects of the hardware such as Imbalance,
+         * Low-Level Configuration and POST Results. The last four parameters of
+         * this message represent the complex signal from the RF front end.
+         *
+         * The following rules of thumb apply:
+         * - The smaller the absolute value of the variable ofsI and ofsQ, the better.
+         * - Ideally, the magnitude of the I-part (magI) and the Q-part (magQ) of the
+         * complex signal should be the same.
          */
         struct Data {
             uint8_t block_id;
