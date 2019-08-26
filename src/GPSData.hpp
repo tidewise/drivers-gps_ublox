@@ -2,19 +2,9 @@
 #define GPS_UBLOX_GPSDATA_HPP
 
 #include <base/Time.hpp>
-#include <base/samples/RigidBodyState.hpp>
-#include <gps_base/UTMConverter.hpp>
 #include <cstdint>
 
 namespace gps_ublox {
-    template<typename T>
-    T may_invalidate(T const& value)
-    {
-        if (value == T::Zero())
-            return T::Ones() * base::unknown<double>();
-        else return value;
-    }
-
     /**
      * GPS data
      */
@@ -28,31 +18,6 @@ namespace gps_ublox {
             GNSS_PLUS_DEAD_RECKONING = 4,
             TIME_ONLY = 5
         };
-
-        base::samples::RigidBodyState toWorld(int zone,  bool north,
-                                              Eigen::Vector3d const& local_origin) const {
-            base::samples::RigidBodyState rbs;
-            gps_base::UTMConverter UTMConverter;
-            gps_base::Solution geodeticPosition;
-
-            Eigen::Vector3d body2ned_velocity = Eigen::Vector3d(
-                vel_north, vel_east, vel_down);
-
-            rbs.time = time;
-            rbs.velocity = Eigen::AngleAxisd(
-                M_PI, Eigen::Vector3d::UnitX()) * may_invalidate(body2ned_velocity);
-
-            UTMConverter.setUTMZone(zone);
-            UTMConverter.setUTMNorth(north);
-            UTMConverter.setNWUOrigin(local_origin);
-            geodeticPosition.latitude = latitude;
-            geodeticPosition.longitude = longitude;
-            geodeticPosition.altitude = height;
-
-            rbs.position = UTMConverter.convertToNWU(geodeticPosition).position;
-
-            return rbs;
-        }
 
         uint32_t time_of_week;  // in milliseconds
         uint8_t valid;
