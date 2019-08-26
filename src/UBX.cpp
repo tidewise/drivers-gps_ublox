@@ -210,24 +210,24 @@ GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
     data.fix_flags = fromLittleEndian<uint8_t>(&payload[21]);
     data.additional_flags = fromLittleEndian<uint8_t>(&payload[22]);
     data.num_sats = fromLittleEndian<uint8_t>(&payload[23]);
-    data.longitude = (double)fromLittleEndian<int32_t>(&payload[24]) * 1e-7;
-    data.latitude = (double)fromLittleEndian<int32_t>(&payload[28]) * 1e-7;
+    data.longitude = base::Angle::fromDeg((double)fromLittleEndian<int32_t>(&payload[24]) * 1e-7);
+    data.latitude = base::Angle::fromDeg((double)fromLittleEndian<int32_t>(&payload[28]) * 1e-7);
     data.height = (double)fromLittleEndian<int32_t>(&payload[32]) / 1000.0;
     data.height_above_mean_sea_level = (double)fromLittleEndian<int32_t>(&payload[36]) / 1000.0;
     data.horizontal_accuracy = (double)fromLittleEndian<uint32_t>(&payload[40]) / 1000.0;
     data.vertical_accuracy = (double)fromLittleEndian<uint32_t>(&payload[44]) / 1000.0;
-    data.vel_north = (double)fromLittleEndian<int32_t>(&payload[48]) / 1000.0;
-    data.vel_east = (double)fromLittleEndian<int32_t>(&payload[52]) / 1000.0;
-    data.vel_down = (double)fromLittleEndian<int32_t>(&payload[56]) / 1000.0;
+    data.vel_ned.x() = (double)fromLittleEndian<int32_t>(&payload[48]) / 1000.0;
+    data.vel_ned.y() = (double)fromLittleEndian<int32_t>(&payload[52]) / 1000.0;
+    data.vel_ned.z() = (double)fromLittleEndian<int32_t>(&payload[56]) / 1000.0;
     data.ground_speed = (double)fromLittleEndian<int32_t>(&payload[60]) / 1000.0;
-    data.heading_of_motion = (double)fromLittleEndian<int32_t>(&payload[64]) * 1e-5;
+    data.heading_of_motion = base::Angle::fromDeg((double)fromLittleEndian<int32_t>(&payload[64]) * 1e-5);
     data.speed_accuracy = (double)fromLittleEndian<uint32_t>(&payload[68]) / 1000.0;
-    data.heading_accuracy = (double)fromLittleEndian<uint32_t>(&payload[72]) * 1e-5;
+    data.heading_accuracy = base::Angle::fromDeg((double)fromLittleEndian<uint32_t>(&payload[72]) * 1e-5);
     data.position_dop = (double)fromLittleEndian<uint16_t>(&payload[76]) * 0.01;
     data.more_flags = fromLittleEndian<uint8_t>(&payload[78]);
-    data.heading_of_vehicle = (double)fromLittleEndian<int32_t>(&payload[84]) * 1e-5;
-    data.magnetic_declination = (double)fromLittleEndian<int16_t>(&payload[88]) * 1e-2;
-    data.magnetic_declination_accuracy = (double)fromLittleEndian<uint16_t>(&payload[90]) * 1e-2;
+    data.heading_of_vehicle = base::Angle::fromDeg((double)fromLittleEndian<int32_t>(&payload[84]) * 1e-5);
+    data.magnetic_declination = base::Angle::fromDeg((double)fromLittleEndian<int16_t>(&payload[88]) * 1e-2);
+    data.magnetic_declination_accuracy = base::Angle::fromDeg((double)fromLittleEndian<uint16_t>(&payload[90]) * 1e-2);
     return data;
 }
 

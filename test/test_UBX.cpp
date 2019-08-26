@@ -163,24 +163,24 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
     ASSERT_EQ(2, data.fix_flags);
     ASSERT_EQ(3, data.additional_flags);
     ASSERT_EQ(24, data.num_sats);
-    ASSERT_FLOAT_EQ(120.22, data.longitude);
-    ASSERT_FLOAT_EQ(45.3, data.latitude);
+    ASSERT_FLOAT_EQ(120.22, data.longitude.getDeg());
+    ASSERT_FLOAT_EQ(45.3, data.latitude.getDeg());
     ASSERT_FLOAT_EQ(2.2, data.height);
     ASSERT_FLOAT_EQ(5.0, data.height_above_mean_sea_level);
     ASSERT_FLOAT_EQ(0.13, data.horizontal_accuracy);
     ASSERT_FLOAT_EQ(0.27, data.vertical_accuracy);
-    ASSERT_FLOAT_EQ(2.3, data.vel_north);
-    ASSERT_FLOAT_EQ(3.3, data.vel_east);
-    ASSERT_FLOAT_EQ(8.4, data.vel_down);
+    ASSERT_FLOAT_EQ(2.3, data.vel_ned.x());
+    ASSERT_FLOAT_EQ(3.3, data.vel_ned.y());
+    ASSERT_FLOAT_EQ(8.4, data.vel_ned.z());
     ASSERT_FLOAT_EQ(7.7, data.ground_speed);
-    ASSERT_FLOAT_EQ(23.7, data.heading_of_motion);
+    ASSERT_FLOAT_EQ(23.7, data.heading_of_motion.getDeg());
     ASSERT_FLOAT_EQ(0.233, data.speed_accuracy);
-    ASSERT_FLOAT_EQ(0.832, data.heading_accuracy);
+    ASSERT_FLOAT_EQ(0.832, data.heading_accuracy.getDeg());
     ASSERT_FLOAT_EQ(4.21, data.position_dop);
     ASSERT_FLOAT_EQ(7, data.more_flags);
-    ASSERT_FLOAT_EQ(0.93, data.heading_of_vehicle);
-    ASSERT_FLOAT_EQ(7.51, data.magnetic_declination);
-    ASSERT_FLOAT_EQ(5.31, data.magnetic_declination_accuracy);
+    ASSERT_FLOAT_EQ(0.93, data.heading_of_vehicle.getDeg());
+    ASSERT_FLOAT_EQ(7.51, data.magnetic_declination.getDeg());
+    ASSERT_FLOAT_EQ(5.31, data.magnetic_declination_accuracy.getDeg());
 }
 
 TEST_F(UBXTest, it_parses_an_rf_frame) {
