@@ -126,15 +126,10 @@ int main(int argc, char** argv)
             return 1;
         }
         driver.openURI(uri);
-        if (input) {
-            driver.setInputProtocol(PORT_S_TO_E.at(port),
-                                    PROTOCOL_S_TO_E.at(protocol),
-                                    enable);
-        } else {
-            driver.setOutputProtocol(PORT_S_TO_E.at(port),
-                                     PROTOCOL_S_TO_E.at(protocol),
-                                     enable);
-        }
+        driver.setPortProtocol(PORT_S_TO_E.at(port),
+                               input ? Driver::DIRECTION_INPUT : Driver::DIRECTION_OUTPUT,
+                               PROTOCOL_S_TO_E.at(protocol),
+                               enable);
     } else {
         cerr << "unexpected command " << cmd << endl;
         return usage();
