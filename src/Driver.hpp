@@ -221,6 +221,10 @@ namespace gps_ublox
             /** Requests gps data
              */
             SignalInfo readSignalInfo();
+
+            /** Reads any frame
+             */
+            UBX::Frame readFrame();
     };
 
 } // end namespace gps_ublox

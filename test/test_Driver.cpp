@@ -480,3 +480,16 @@ TEST_F(DriverTest, it_requests_sig_info) {
     EXPECT_REPLY(packet, reply);
     driver.readSignalInfo();
 }
+
+TEST_F(DriverTest, it_reads_any_pending_frame) {
+    Frame frame;
+    frame.msg_class = MSG_CLASS_NAV;
+    frame.msg_id = MSG_ID_SIG;
+    frame.payload.resize(8, 0);
+    pushDataToDriver(frame.toPacket());
+
+    Frame in_frame = driver.readFrame();
+    ASSERT_EQ(frame.msg_class, in_frame.msg_class);
+    ASSERT_EQ(frame.msg_id, in_frame.msg_id);
+    ASSERT_EQ(frame.payload, in_frame.payload);
+}

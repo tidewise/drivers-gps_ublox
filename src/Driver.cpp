@@ -79,6 +79,11 @@ Frame Driver::waitForPacket(const uint8_t *class_id, const uint8_t *msg_id,
         "Did not receive the expected packet within the timeout");
 }
 
+Frame Driver::readFrame()
+{
+    return waitForPacket();
+}
+
 Frame Driver::waitForFrame(uint8_t class_id, uint8_t msg_id)
 {
     return waitForPacket(&class_id, &msg_id);
