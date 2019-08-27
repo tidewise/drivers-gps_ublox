@@ -493,3 +493,71 @@ TEST_F(DriverTest, it_reads_any_pending_frame) {
     ASSERT_EQ(frame.msg_id, in_frame.msg_id);
     ASSERT_EQ(frame.payload, in_frame.payload);
 }
+
+TEST_F(DriverTest, it_sets_output_rate_of_pvt_on_i2c) {
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
+
+    pushDataToDriver(frame.toPacket());
+    driver.setOutputRate(
+        Driver::PORT_I2C,
+        Driver::MSGOUT_NAV_PVT,
+        2,
+        false);
+
+    ASSERT_EQ(getConfigValueSetPacket(0x20910006, (uint8_t)2, false), readDataFromDriver());
+}
+
+TEST_F(DriverTest, it_sets_output_rate_of_sig_on_i2c) {
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
+
+    pushDataToDriver(frame.toPacket());
+    driver.setOutputRate(
+        Driver::PORT_I2C,
+        Driver::MSGOUT_NAV_SIG,
+        5,
+        false);
+
+    ASSERT_EQ(getConfigValueSetPacket(0x20910345, (uint8_t)5, false), readDataFromDriver());
+}
+
+TEST_F(DriverTest, it_sets_output_rate_of_rf_on_i2c) {
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
+
+    pushDataToDriver(frame.toPacket());
+    driver.setOutputRate(
+        Driver::PORT_I2C,
+        Driver::MSGOUT_MON_RF,
+        1,
+        true);
+
+    ASSERT_EQ(getConfigValueSetPacket(0x20910359, (uint8_t)1, true), readDataFromDriver());
+}
+
+TEST_F(DriverTest, it_sets_output_rate_of_rf_on_spi) {
+    Frame frame;
+    frame.msg_class = MSG_CLASS_ACK;
+    frame.msg_id = MSG_ID_ACK;
+    frame.payload.push_back(MSG_CLASS_CFG);
+    frame.payload.push_back(MSG_ID_VALSET);
+
+    pushDataToDriver(frame.toPacket());
+    driver.setOutputRate(
+        Driver::PORT_SPI,
+        Driver::MSGOUT_MON_RF,
+        1,
+        true);
+
+    ASSERT_EQ(getConfigValueSetPacket(0x2091035d, (uint8_t)1, true), readDataFromDriver());
+}

@@ -125,6 +125,22 @@ void Driver::setPortEnabled(DevicePort port, bool state, bool persist)
     setConfigKeyValue(key_id, state, persist);
 }
 
+void Driver::setOutputRate(DevicePort port, MessageOutputType msg, uint8_t rate, bool persist) {
+    uint8_t port_offset;
+    // Unfortunately, message offsets are different from the ones
+    // in CFG-IN/OUTPROT, so we have to recalculate here :(
+    switch (port) {
+        case PORT_I2C: port_offset = 0; break;
+        case PORT_UART1: port_offset = 1; break;
+        case PORT_UART2: port_offset = 2; break;
+        case PORT_USB: port_offset = 3; break;
+        case PORT_SPI: port_offset = 4; break;
+    }
+
+    uint32_t key_id = msg + port_offset;
+    setConfigKeyValue(key_id, rate, persist);
+}
+
 void Driver::setOdometer(bool state, bool persist)
 {
     setConfigKeyValue(ODO_USE_ODO, state, persist);

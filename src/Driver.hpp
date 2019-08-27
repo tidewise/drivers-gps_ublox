@@ -77,6 +77,15 @@ namespace gps_ublox
                 DIRECTION_OUTPUT = 0x00010000,
             };
 
+            /** Message types
+             */
+            enum MessageOutputType {
+                MSGOUT_NAV_PVT = 0x20910006,
+                MSGOUT_NAV_SIG = 0x20910345,
+                MSGOUT_MON_RF = 0x20910359
+            };
+
+
             Driver();
 
             /** Enables/disables a port
@@ -195,6 +204,15 @@ namespace gps_ublox
              */
             void setStaticHoldDistanceThreshold(uint16_t distance, bool persist = true);
 
+            /** Sets the output rate of the message on a given port
+             *
+             * @param port Port to be toggled
+             * @param msg Message type
+             * @param rate Per second, per epoch
+             * @param persist Whether the configuration should be persisted
+             */
+            void setOutputRate(DevicePort port, MessageOutputType msg, uint8_t rate, bool persist = true);
+
             /** Requests device version information
              */
             BoardInfo readBoardInfo();
@@ -210,15 +228,15 @@ namespace gps_ublox
             void setPortProtocol(DevicePort port, DataDirection direction,
                                  DeviceProtocol protocol, bool state, bool persist = true);
 
-            /** Requests gps data
+            /** Requests GPS data
              */
             GPSData readGPSData();
 
-            /** Requests gps data
+            /** Requests RF info
              */
             RFInfo readRFInfo();
 
-            /** Requests gps data
+            /** Requests Signal info
              */
             SignalInfo readSignalInfo();
 
