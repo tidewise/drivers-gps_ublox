@@ -11,6 +11,7 @@
 #include <gps_ublox/RFInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
+#include <gps_ublox/BoardInfo.hpp>
 
 namespace gps_ublox
 {
@@ -151,6 +152,11 @@ namespace gps_ublox
          * Parses a UBX-NAV-SAT payload
          */
         SatelliteInfo parseSAT(const std::vector<uint8_t> &payload);
+
+        /**
+         * Parses a UBX-MON-VER payload
+         */
+        BoardInfo parseVER(const std::vector<uint8_t> &payload);
 
         /** Implements iodrivers_base's extractPacket protocol
          *

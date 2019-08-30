@@ -263,6 +263,17 @@ GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
     return data;
 }
 
+BoardInfo UBX::parseVER(const vector<uint8_t> &payload) {
+    BoardInfo info;
+    info.software_version = string(reinterpret_cast<const char*>(&payload[0]));
+    info.hardware_version = string(reinterpret_cast<const char*>(&payload[30]));
+
+    for (size_t i = 40; i < payload.size(); i += 30) {
+        info.extensions.push_back(string(reinterpret_cast<const char*>(&payload[i])));
+    }
+    return info;
+}
+
 namespace gps_ublox {
 namespace UBX {
 
