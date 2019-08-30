@@ -265,3 +265,38 @@ TEST_F(UBXTest, it_parses_a_sig_frame) {
     ASSERT_EQ(112, data.signals[0].signal_flags);
     ASSERT_EQ(15, data.signals[1].gnss_id);
 }
+
+
+TEST_F(UBXTest, it_parses_a_sat_frame) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint32_t>(payload, 3600);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 2);
+    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint8_t>(payload, 0);
+
+    toLittleEndian<uint8_t>(payload, 25); // gnss id
+    toLittleEndian<uint8_t>(payload, 21); // satellite id
+    toLittleEndian<uint8_t>(payload, 53); // signal strength
+    toLittleEndian<int8_t>(payload, 43); // elevation
+    toLittleEndian<int16_t>(payload, 120); // azimuth
+    toLittleEndian<int16_t>(payload, 31);  // pseudorange residual
+    toLittleEndian<uint32_t>(payload, 112); // flags
+
+    payload.resize(8 + (12 * 2));
+    payload[20] = 15;
+
+    SatelliteInfo data = UBX::parseSAT(payload);
+    ASSERT_EQ(3600, data.time_of_week);
+    ASSERT_EQ(0, data.version);
+    ASSERT_EQ(2, data.n_sats);
+
+    ASSERT_EQ(25, data.signals[0].gnss_id);
+    ASSERT_EQ(21, data.signals[0].satellite_id);
+    ASSERT_FLOAT_EQ(43, data.signals[0].elevation.getDeg());
+    ASSERT_FLOAT_EQ(120, data.signals[0].azimuth.getDeg());
+    ASSERT_FLOAT_EQ(3.1, data.signals[0].pseudorange_residual);
+    ASSERT_EQ(53, data.signals[0].signal_strength);
+    ASSERT_EQ(112, data.signals[0].signal_flags);
+    ASSERT_EQ(15, data.signals[1].gnss_id);
+}

@@ -155,7 +155,7 @@ SignalInfo UBX::parseSIG(const vector<uint8_t> &payload) {
 
     uint8_t n_signals = payload[5];
     if (payload.size() != 8 + (n_signals * (unsigned int)16)) {
-        std::stringstream ss("Invalid RF payload (invalid size = ");
+        std::stringstream ss("Invalid SIG payload (invalid size = ");
         ss << payload.size() << ")";
         throw std::invalid_argument(ss.str());
     }
@@ -177,6 +177,38 @@ SignalInfo UBX::parseSIG(const vector<uint8_t> &payload) {
         data.signals[i].correction_source = payload[16 + (16 * i)];
         data.signals[i].ionospheric_model = payload[17 + (16 * i)];
         data.signals[i].signal_flags = fromLittleEndian<uint16_t>(&payload[18 + (16 * i)]);
+    }
+    return data;
+}
+
+SatelliteInfo UBX::parseSAT(const vector<uint8_t> &payload) {
+    if (payload.size() < 8) {
+        std::stringstream ss("Invalid SAT payload (invalid size = ");
+        ss << payload.size() << ")";
+        throw std::invalid_argument(ss.str());
+    }
+
+    uint8_t n_sats = payload[5];
+    if (payload.size() != 8 + (n_sats * (unsigned int)12)) {
+        std::stringstream ss("Invalid SAT payload (invalid size = ");
+        ss << payload.size() << ")";
+        throw std::invalid_argument(ss.str());
+    }
+
+    SatelliteInfo data;
+    data.time_of_week = fromLittleEndian<uint32_t>(&payload[0]);
+    data.version = payload[4];
+    data.n_sats = payload[5];
+    data.signals.resize(n_sats);
+
+    for (size_t i = 0; i < n_sats; i++) {
+        data.signals[i].gnss_id = payload[8 + (12 * i)];
+        data.signals[i].satellite_id = payload[9 + (12 * i)];
+        data.signals[i].signal_strength = payload[10 + (12 * i)];
+        data.signals[i].elevation = base::Angle::fromDeg(fromLittleEndian<int8_t>(&payload[11 + (12 * i)]));
+        data.signals[i].azimuth = base::Angle::fromDeg(fromLittleEndian<int16_t>(&payload[12 + (12 * i)]));
+        data.signals[i].pseudorange_residual = fromLittleEndian<int16_t>(&payload[14 + (12 * i)]) * 0.1;
+        data.signals[i].signal_flags = fromLittleEndian<uint32_t>(&payload[16 + (12 * i)]);
     }
     return data;
 }

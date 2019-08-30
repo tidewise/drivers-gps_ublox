@@ -48,6 +48,11 @@ SignalInfo Driver::readSignalInfo() {
     return UBX::parseSIG(frame.payload);
 }
 
+SatelliteInfo Driver::readSatelliteInfo() {
+    Frame frame = pollFrame(MSG_CLASS_NAV, MSG_ID_SAT);
+    return UBX::parseSAT(frame.payload);
+}
+
 Frame Driver::pollFrame(uint8_t class_id, uint8_t msg_id)
 {
     Frame frame = {
