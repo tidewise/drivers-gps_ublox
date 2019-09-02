@@ -7,6 +7,7 @@
 #include <gps_ublox/GPSData.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
+#include <gps_ublox/SatelliteInfo.hpp>
 #include <stdexcept>
 
 namespace gps_ublox
@@ -239,6 +240,10 @@ namespace gps_ublox
             /** Requests Signal info
              */
             SignalInfo readSignalInfo();
+
+            /** Requests Satellite info
+             */
+            SatelliteInfo readSatelliteInfo();
 
             /** Reads any frame
              */

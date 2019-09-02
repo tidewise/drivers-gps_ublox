@@ -10,6 +10,8 @@
 #include <gps_ublox/GPSData.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
+#include <gps_ublox/SatelliteInfo.hpp>
+#include <gps_ublox/BoardInfo.hpp>
 
 namespace gps_ublox
 {
@@ -48,7 +50,8 @@ namespace gps_ublox
             MSG_ID_VER = 0x04,
             MSG_ID_PVT = 0x07,
             MSG_ID_RF = 0x38,
-            MSG_ID_SIG = 0x43
+            MSG_ID_SIG = 0x43,
+            MSG_ID_SAT = 0x35
         };
 
         /** The layer where a configuration data is stored
@@ -145,6 +148,15 @@ namespace gps_ublox
          */
         SignalInfo parseSIG(const std::vector<uint8_t> &payload);
 
+        /**
+         * Parses a UBX-NAV-SAT payload
+         */
+        SatelliteInfo parseSAT(const std::vector<uint8_t> &payload);
+
+        /**
+         * Parses a UBX-MON-VER payload
+         */
+        BoardInfo parseVER(const std::vector<uint8_t> &payload);
 
         /** Implements iodrivers_base's extractPacket protocol
          *

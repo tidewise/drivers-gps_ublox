@@ -22,15 +22,7 @@ int Driver::extractPacket(const uint8_t *buffer, size_t buffer_size) const
 
 BoardInfo Driver::readBoardInfo() {
     Frame frame = pollFrame(MSG_CLASS_MON, MSG_ID_VER);
-
-    BoardInfo info;
-    info.software_version = string(reinterpret_cast<char*>(&frame.payload[0]));
-    info.hardware_version = string(reinterpret_cast<char*>(&frame.payload[30]));
-
-    for (size_t i = 40; i < frame.payload.size(); i += 30) {
-        info.extensions.push_back(string(reinterpret_cast<char*>(&frame.payload[i])));
-    }
-    return info;
+    return UBX::parseVER(frame.payload);
 }
 
 GPSData Driver::readGPSData() {
@@ -46,6 +38,11 @@ RFInfo Driver::readRFInfo() {
 SignalInfo Driver::readSignalInfo() {
     Frame frame = pollFrame(MSG_CLASS_NAV, MSG_ID_SIG);
     return UBX::parseSIG(frame.payload);
+}
+
+SatelliteInfo Driver::readSatelliteInfo() {
+    Frame frame = pollFrame(MSG_CLASS_NAV, MSG_ID_SAT);
+    return UBX::parseSAT(frame.payload);
 }
 
 Frame Driver::pollFrame(uint8_t class_id, uint8_t msg_id)
