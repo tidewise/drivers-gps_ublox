@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
+#define _STANDARD_SOURCE
+#include <time.h>
 
 #include <array>
 #include <sstream>
@@ -223,18 +225,18 @@ GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
 
     GPSData data;
     data.time_of_week = fromLittleEndian<uint32_t>(&payload[0]);
-    data.time = base::Time::fromTimeValues(
-        fromLittleEndian<uint16_t>(&payload[4]),
-        fromLittleEndian<uint8_t>(&payload[6]),
-        fromLittleEndian<uint8_t>(&payload[7]),
-        fromLittleEndian<uint8_t>(&payload[8]),
-        fromLittleEndian<uint8_t>(&payload[9]),
-        fromLittleEndian<uint8_t>(&payload[10]),
-        0,
-        0);
 
-    int32_t fraction = fromLittleEndian<int32_t>(&payload[16]); // in nanoseconds
-    data.time = data.time + base::Time::fromMicroseconds((double)fraction / 1000.0);
+    tm utctm;
+    memset(&utctm, 0, sizeof(utctm));
+    utctm.tm_year = fromLittleEndian<uint16_t>(&payload[4]) - 1900;
+    utctm.tm_mon = fromLittleEndian<uint8_t>(&payload[6]) - 1;
+    utctm.tm_mday = fromLittleEndian<uint8_t>(&payload[7]);
+    utctm.tm_hour = fromLittleEndian<uint8_t>(&payload[8]);
+    utctm.tm_min = fromLittleEndian<uint8_t>(&payload[9]);
+    utctm.tm_sec = fromLittleEndian<uint8_t>(&payload[10]);
+    int32_t nanoseconds = fromLittleEndian<int32_t>(&payload[16]); // in nanoseconds
+    uint64_t secs = timegm(&utctm);
+    data.time = base::Time::fromSeconds(secs, nanoseconds / 1000);
 
     data.valid = fromLittleEndian<uint8_t>(&payload[11]);
     data.time_accuracy = fromLittleEndian<uint32_t>(&payload[12]);

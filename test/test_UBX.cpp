@@ -156,7 +156,8 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
 
     GPSData data = UBX::parsePVT(payload);
     ASSERT_EQ(3600, data.time_of_week);
-    ASSERT_EQ(base::Time::fromTimeValues(2019, 8, 20, 23, 15, 32, 999, 999), data.time);
+    // Timestamp converted using https://www.epochconverter.com/
+    ASSERT_EQ(1566342932999999ull, data.time.toMicroseconds());
     ASSERT_EQ(1, data.valid);
     ASSERT_EQ(2860, data.time_accuracy);
     ASSERT_FLOAT_EQ(GPSData::GNSS_PLUS_DEAD_RECKONING, data.fix_type);
