@@ -79,7 +79,7 @@ int UBX::extractPacket(const uint8_t *buffer, size_t buffer_size)
 }
 
 array<uint8_t, 2> UBX::checksum(const uint8_t *buffer, const uint8_t *end) {
-    uint8_t ck_a, ck_b = 0;
+    uint8_t ck_a = 0, ck_b = 0;
     while (buffer != end) {
         ck_a += *buffer++;
         ck_b += ck_a;
