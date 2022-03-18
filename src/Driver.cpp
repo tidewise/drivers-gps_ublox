@@ -66,6 +66,46 @@ Frame Driver::pollFrame(uint8_t class_id, uint8_t msg_id)
     return waitForFrame(class_id, msg_id);
 }
 
+void Driver::poll(PollCallbacks& callbacks) {
+    pollOneFrame(callbacks, getReadTimeout());
+
+    // Pull as much RTCM data as possible in one shot
+    try {
+        while(true) {
+            pollOneFrame(callbacks, base::Time());
+        }
+    }
+    catch(iodrivers_base::TimeoutError&) {
+    }
+}
+
+void Driver::pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout) {
+    int bytes = readPacket(mReadBuffer, BUFFER_SIZE, timeout);
+
+    if (bytes == 0) {
+        return;
+    }
+
+    if (gps_base::rtcm3::isPreamble(mReadBuffer, bytes)) {
+        callbacks.rtcm(mReadBuffer, bytes);
+        return;
+    }
+
+    Frame frame = Frame::fromPacket(mReadBuffer, bytes);
+    if (frame.msg_class == MSG_CLASS_NAV && frame.msg_id == MSG_ID_PVT) {
+        callbacks.pvt(UBX::parsePVT(frame.payload));
+    }
+    else if (frame.msg_class == UBX::MSG_CLASS_NAV && frame.msg_id == UBX::MSG_ID_SAT) {
+        callbacks.satelliteInfo(UBX::parseSAT(frame.payload));
+    }
+    else if (frame.msg_class == UBX::MSG_CLASS_NAV && frame.msg_id == UBX::MSG_ID_SIG) {
+        callbacks.signalInfo(UBX::parseSIG(frame.payload));
+    }
+    else if (frame.msg_class == UBX::MSG_CLASS_MON && frame.msg_id == UBX::MSG_ID_RF) {
+        callbacks.rfInfo(UBX::parseRF(frame.payload));
+    }
+}
+
 Frame Driver::waitForPacket(const uint8_t *class_id, const uint8_t *msg_id,
                             const std::vector<uint8_t> *payload)
 {

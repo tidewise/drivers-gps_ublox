@@ -15,6 +15,9 @@ using namespace std;
 using namespace gps_ublox;
 using namespace UBX;
 
+template<typename T>
+void toLittleEndian(vector<uint8_t> &buffer, T value);
+
 struct DriverTest : public ::testing::Test, iodrivers_base::Fixture<Driver> {
     vector<uint8_t> buffer;
     DriverTest() {
@@ -420,7 +423,7 @@ TEST_F(DriverTest, it_sets_the_distance_threshold) {
     driver.setStaticHoldDistanceThreshold(3, true);
 }
 
-TEST_F(DriverTest, it_requests_gps_data) {
+TEST_F(DriverTest, it_reads_a_pvt_message) {
     IODRIVERS_BASE_MOCK();
     Frame frame;
     frame.msg_class = MSG_CLASS_NAV;
@@ -550,4 +553,110 @@ TEST_F(DriverTest, it_parses_RTCM_messages_data_received_between_UBX_frames_but_
 
     driver.readFrame();
     ASSERT_EQ(0, driver.getStats().bad_rx);
+}
+
+TEST_F(DriverTest, poll_calls_back_for_RTCM_data) {
+    struct Callbacks : Driver::PollCallbacks {
+        std::vector<uint8_t> data;
+
+        void rtcm(uint8_t const* buffer, size_t size) {
+            data.insert(data.end(), buffer, buffer + size);
+        }
+    };
+
+    const std::vector<uint8_t> expected =
+    {
+        0xd3, 0x00, 0x13, 0x3e, 0xd0, 0x00, 0x02, 0x36,
+        0xfd, 0xb8, 0x0d, 0xde, 0x08, 0x00, 0x5b, 0x2b,
+        0xc1, 0x08, 0xa7, 0xb9, 0x8d, 0x3d, 0xd8, 0xab, 0x37
+    };
+    pushDataToDriver(expected);
+
+    Callbacks callbacks;
+    driver.poll(callbacks);
+    ASSERT_EQ(expected, callbacks.data);
+}
+
+TEST_F(DriverTest, poll_calls_back_for_PVT_data) {
+    struct Callbacks : Driver::PollCallbacks {
+        PVT data;
+
+        void pvt(PVT const& pvt) {
+            data = pvt;
+        }
+    };
+
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_NAV;
+    frame.msg_id = MSG_ID_PVT;
+    toLittleEndian<uint32_t>(frame.payload, 3600); // time of week
+    frame.payload.resize(92, 0);
+    pushDataToDriver(frame.toPacket());
+
+    Callbacks callbacks;
+    driver.poll(callbacks);
+
+    ASSERT_EQ(3600, callbacks.data.time_of_week);
+}
+
+TEST_F(DriverTest, poll_calls_back_for_satellite_info_data) {
+    struct Callbacks : Driver::PollCallbacks {
+        SatelliteInfo data;
+
+        void satelliteInfo(SatelliteInfo const& info) {
+            data = info;
+        }
+    };
+
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_NAV;
+    frame.msg_id = MSG_ID_SAT;
+    frame.payload.resize(8 + (12 * 2));
+    frame.payload[5] = 2;
+    frame.payload[8] = 25;
+    pushDataToDriver(frame.toPacket());
+
+    Callbacks callbacks;
+    driver.poll(callbacks);
+
+    ASSERT_EQ(2, callbacks.data.signals.size());
+    ASSERT_EQ(25, callbacks.data.signals[0].gnss_id);
+}
+
+TEST_F(DriverTest, poll_calls_back_for_rf_info_data) {
+    struct Callbacks : Driver::PollCallbacks {
+        RFInfo data;
+
+        void rfInfo(RFInfo const& info) {
+            data = info;
+        }
+    };
+
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_MON;
+    frame.msg_id = MSG_ID_RF;
+    frame.payload.resize(4 + (24 * 2));
+    frame.payload[1] = 2;
+    frame.payload[4] = 25;
+    pushDataToDriver(frame.toPacket());
+
+    Callbacks callbacks;
+    driver.poll(callbacks);
+
+    ASSERT_EQ(2, callbacks.data.blocks.size());
+    ASSERT_EQ(25, callbacks.data.blocks[0].block_id);
+}
+
+template<typename T>
+void toLittleEndian(vector<uint8_t> &buffer, T value)
+{
+    uint8_t shifter = 0;
+    T bytes = reinterpret_cast<const T&>(value);
+    for (size_t i = 0; i < sizeof(T); i++) {
+        buffer.push_back((bytes >> shifter) & 0xFF);
+        shifter += 8;
+    }
 }

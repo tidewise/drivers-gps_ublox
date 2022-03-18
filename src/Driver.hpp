@@ -20,6 +20,17 @@ namespace gps_ublox
 
     class Driver : public iodrivers_base::Driver
     {
+        public:
+            struct PollCallbacks {
+                virtual ~PollCallbacks() {}
+
+                virtual void rtcm(uint8_t const* buffer, size_t size) {};
+                virtual void pvt(PVT const& pvt) {};
+                virtual void satelliteInfo(SatelliteInfo const& info) {};
+                virtual void signalInfo(SignalInfo const& info) {};
+                virtual void rfInfo(RFInfo const& info) {};
+            };
+
         private:
             static const size_t BUFFER_SIZE = 256 * 15;
             uint8_t mWriteBuffer[BUFFER_SIZE];
@@ -31,6 +42,7 @@ namespace gps_ublox
                                      const uint8_t *msg_id = nullptr,
                                      const std::vector<uint8_t> *payload = nullptr);
             bool waitForAck(uint8_t class_id, uint8_t msg_id);
+            void pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout);
 
         protected:
             /** Implements iodrivers_base's extractPacket protocol
@@ -213,6 +225,8 @@ namespace gps_ublox
             /** Reads any frame
              */
             UBX::Frame readFrame();
+
+            void poll(PollCallbacks& callbacks);
     };
 
 } // end namespace gps_ublox
