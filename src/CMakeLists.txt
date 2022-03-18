@@ -1,7 +1,7 @@
 rock_library(gps_ublox
     SOURCES Driver.cpp UBX.cpp Driver.cpp cfg.cpp
     HEADERS Driver.hpp UBX.hpp Driver.hpp
-      BoardInfo.hpp SignalInfo.hpp RFInfo.hpp GPSData.hpp SatelliteInfo.hpp
+      BoardInfo.hpp SignalInfo.hpp RFInfo.hpp PVT.hpp SatelliteInfo.hpp
       cfg.hpp
     DEPS_PKGCONFIG iodrivers_base base-types gps_base)
 

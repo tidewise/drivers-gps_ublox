@@ -3,7 +3,7 @@
 
 #include <gps_ublox/BoardInfo.hpp>
 #include <gps_ublox/cfg.hpp>
-#include <gps_ublox/GPSData.hpp>
+#include <gps_ublox/PVT.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
@@ -196,7 +196,7 @@ namespace gps_ublox
 
             /** Requests GPS data
              */
-            GPSData readGPSData();
+            PVT readPVT();
 
             /** Requests RF info
              */

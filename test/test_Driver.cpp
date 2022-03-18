@@ -429,7 +429,7 @@ TEST_F(DriverTest, it_requests_gps_data) {
     vector<uint8_t> packet = Frame({ MSG_CLASS_NAV, MSG_ID_PVT }).toPacket();
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
-    driver.readGPSData();
+    driver.readPVT();
 }
 
 TEST_F(DriverTest, it_requests_rf_info) {

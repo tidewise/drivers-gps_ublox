@@ -7,7 +7,7 @@
 #include <array>
 #include <vector>
 
-#include <gps_ublox/GPSData.hpp>
+#include <gps_ublox/PVT.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
@@ -111,7 +111,7 @@ namespace gps_ublox
         /**
          * Parses an UBX-NAV-PVT payload
          */
-        GPSData parsePVT(const std::vector<uint8_t> &payload);
+        PVT parsePVT(const std::vector<uint8_t> &payload);
 
         /**
          * Parses an UBX-MON-RF payload

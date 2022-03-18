@@ -2,7 +2,7 @@
 #include <gps_ublox/BoardInfo.hpp>
 #include <gps_ublox/cfg.hpp>
 #include <gps_ublox/Driver.hpp>
-#include <gps_ublox/GPSData.hpp>
+#include <gps_ublox/PVT.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <base/Time.hpp>
 #include <iostream>
@@ -35,7 +35,7 @@ BoardInfo Driver::readBoardInfo() {
     return UBX::parseVER(frame.payload);
 }
 
-GPSData Driver::readGPSData() {
+PVT Driver::readPVT() {
     Frame frame = pollFrame(MSG_CLASS_NAV, MSG_ID_PVT);
     return UBX::parsePVT(frame.payload);
 }

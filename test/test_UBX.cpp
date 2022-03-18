@@ -155,13 +155,13 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
     toLittleEndian<int16_t>(payload, 751);  // magnetic declination
     toLittleEndian<uint16_t>(payload, 531);  // magnetic declination accuracy
 
-    GPSData data = UBX::parsePVT(payload);
+    PVT data = UBX::parsePVT(payload);
     ASSERT_EQ(3600, data.time_of_week);
     // Timestamp converted using https://www.epochconverter.com/
     ASSERT_EQ(1566342932999999ull, data.time.toMicroseconds());
     ASSERT_EQ(1, data.valid);
     ASSERT_EQ(2860, data.time_accuracy);
-    ASSERT_FLOAT_EQ(GPSData::GNSS_PLUS_DEAD_RECKONING, data.fix_type);
+    ASSERT_EQ(PVT::GNSS_PLUS_DEAD_RECKONING, data.fix_type);
     ASSERT_EQ(2, data.fix_flags);
     ASSERT_EQ(3, data.additional_flags);
     ASSERT_EQ(24, data.num_sats);

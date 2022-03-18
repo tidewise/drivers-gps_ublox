@@ -8,9 +8,9 @@
 
 namespace gps_ublox {
     /**
-     * GPS data
+     * Ublox' PVT message
      */
-    struct GPSData {
+    struct PVT {
         enum GNSSFixType {
             NO_FIX = 0,
             DEAD_RECKONING = 1,

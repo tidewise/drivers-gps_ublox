@@ -20,16 +20,16 @@ static const map<string, DeviceProtocol> PROTOCOL_S_TO_E = {
     { "rtcm3x", PROTOCOL_RTCM3X }
 };
 
-static const map<GPSData::GNSSFixType, string> FIX_TO_STRING = {
-    { GPSData::NO_FIX, "None" },
-    { GPSData::FIX_2D, "2D" },
-    { GPSData::FIX_3D, "3D" }
+static const map<PVT::GNSSFixType, string> FIX_TYPE_TO_STRING = {
+    { PVT::NO_FIX, "None" },
+    { PVT::FIX_2D, "2D" },
+    { PVT::FIX_3D, "3D" }
 };
 
-static const map<GPSData::GNSSFixFlags, string> FIX_FLAG_TO_STRING = {
-    { GPSData::FIX_DIFFERENTIAL, "D" },
-    { GPSData::FIX_RTK_FLOAT, "FloatRTK" },
-    { GPSData::FIX_RTK_FIXED, "FixRTK" }
+static const map<PVT::GNSSFixFlags, string> FIX_FLAG_TO_STRING = {
+    { PVT::FIX_DIFFERENTIAL, "D" },
+    { PVT::FIX_RTK_FLOAT, "FloatRTK" },
+    { PVT::FIX_RTK_FIXED, "FixRTK" }
 };
 
 int usage()
@@ -153,7 +153,7 @@ int main(int argc, char** argv)
         cout << "Lat Lon Height HAboveMSL Fix" << endl;
 
         while(true) {
-            auto data = driver.readGPSData();
+            auto data = driver.readPVT();
             string fix_type = FIX_TO_STRING.at(data.fix_type);
             for (auto const& flag: FIX_FLAG_TO_STRING) {
                 if ((flag.first & data.fix_flags) == flag.first) {

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <gps_ublox/UBX.hpp>
-#include <gps_ublox/GPSData.hpp>
+#include <gps_ublox/PVT.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
 
@@ -215,7 +215,7 @@ SatelliteInfo UBX::parseSAT(const vector<uint8_t> &payload) {
     return data;
 }
 
-GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
+PVT UBX::parsePVT(const vector<uint8_t> &payload) {
     if (payload.size() != 92) {
         std::stringstream ss;
         ss << "Invalid PVT payload (invalid size = "
@@ -223,7 +223,7 @@ GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
         throw std::invalid_argument(ss.str());
     }
 
-    GPSData data;
+    PVT data;
     data.time_of_week = fromLittleEndian<uint32_t>(&payload[0]);
 
     tm utctm;
@@ -240,7 +240,7 @@ GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
 
     data.valid = fromLittleEndian<uint8_t>(&payload[11]);
     data.time_accuracy = fromLittleEndian<uint32_t>(&payload[12]);
-    data.fix_type = static_cast<GPSData::GNSSFixType>(fromLittleEndian<uint8_t>(&payload[20]));
+    data.fix_type = static_cast<PVT::GNSSFixType>(fromLittleEndian<uint8_t>(&payload[20]));
     data.fix_flags = fromLittleEndian<uint8_t>(&payload[21]);
     data.additional_flags = fromLittleEndian<uint8_t>(&payload[22]);
     data.num_sats = fromLittleEndian<uint8_t>(&payload[23]);
