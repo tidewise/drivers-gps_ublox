@@ -1,6 +1,7 @@
 #include <iostream>
 #include <gps_ublox/Driver.hpp>
 #include <map>
+#include <iomanip>
 
 using namespace std;
 using namespace gps_ublox;
@@ -19,6 +20,18 @@ static const map<string, Driver::DeviceProtocol> PROTOCOL_S_TO_E = {
     { "rtcm3x", Driver::PROTOCOL_RTCM3X }
 };
 
+static const map<GPSData::GNSSFixType, string> FIX_TO_STRING = {
+    { GPSData::NO_FIX, "None" },
+    { GPSData::FIX_2D, "2D" },
+    { GPSData::FIX_3D, "3D" }
+};
+
+static const map<GPSData::GNSSFixFlags, string> FIX_FLAG_TO_STRING = {
+    { GPSData::FIX_DIFFERENTIAL, "D" },
+    { GPSData::FIX_RTK_FLOAT, "FloatRTK" },
+    { GPSData::FIX_RTK_FIXED, "FixRTK" }
+};
+
 int usage()
 {
     cerr
@@ -29,6 +42,7 @@ int usage()
         << "  enable-input PORT PROTOCOL ENABLED   enable input protocol on a given port\n"
         << "  enable-output PORT PROTOCOL ENABLED  enable output protocol on a given port\n"
         << "  enable-port PORT ENABLED             enable communication on a given port\n"
+        << "  poll-solution                        poll and display solution\n"
         << flush;
 
     return 0;
@@ -130,6 +144,28 @@ int main(int argc, char** argv)
                                input ? Driver::DIRECTION_INPUT : Driver::DIRECTION_OUTPUT,
                                PROTOCOL_S_TO_E.at(protocol),
                                enable);
+    } else if (cmd == "poll-solution") {
+        driver.openURI(uri);
+        driver.setPortProtocol(Driver::PORT_USB, Driver::DIRECTION_OUTPUT, Driver::PROTOCOL_UBX, true, false);
+        driver.setOutputRate(Driver::PORT_USB, Driver::MSGOUT_NAV_PVT, 1, false);
+        driver.setReadTimeout(base::Time::fromSeconds(2));
+
+        cout << "Lat Lon Height HAboveMSL Fix" << endl;
+
+        while(true) {
+            auto data = driver.readGPSData();
+            string fix_type = FIX_TO_STRING.at(data.fix_type);
+            for (auto const& flag: FIX_FLAG_TO_STRING) {
+                if ((flag.first & data.fix_flags) == flag.first) {
+                    fix_type += "/" + flag.second;
+                }
+            }
+
+            std::cout
+                << data.latitude.getDeg() << " " << data.longitude.getDeg() << " "
+                << data.height << " " << data.height_above_mean_sea_level << " "
+                << fix_type << "\n";
+        }
     } else {
         cerr << "unexpected command " << cmd << endl;
         return usage();
