@@ -114,16 +114,19 @@ void toLittleEndian(vector<uint8_t> &buffer, T value)
 
 RFInfo UBX::parseRF(const vector<uint8_t> &payload) {
     if (payload.size() < 4) {
-        std::stringstream ss("Invalid RF payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+        throw std::invalid_argument(
+            "Invalid RF payload (size " + to_string(payload.size()) + ", "
+            "expected at least 4)"
+        );
     }
 
     uint8_t n_blocks = payload[1];
-    if (payload.size() != 4 + (n_blocks * (unsigned int)24)) {
-        std::stringstream ss("Invalid RF payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+    unsigned int expected = 4 + (n_blocks * 24u);
+    if (payload.size() != expected) {
+        throw std::invalid_argument(
+            "Invalid RF payload (size " + to_string(payload.size()) + ", "
+            "expected " + to_string(expected) + ")"
+        );
     }
 
     RFInfo data;
@@ -150,16 +153,19 @@ RFInfo UBX::parseRF(const vector<uint8_t> &payload) {
 
 SignalInfo UBX::parseSIG(const vector<uint8_t> &payload) {
     if (payload.size() < 8) {
-        std::stringstream ss("Invalid SIG payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+        throw std::invalid_argument(
+            "Invalid SIG payload (size " + to_string(payload.size())
+            + ", expected at least 8)"
+        );
     }
 
     uint8_t n_signals = payload[5];
-    if (payload.size() != 8 + (n_signals * (unsigned int)16)) {
-        std::stringstream ss("Invalid SIG payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+    unsigned int expected = 8 + (n_signals * 16u);
+    if (payload.size() != expected) {
+        throw std::invalid_argument(
+            "Invalid SIG payload (size " + to_string(payload.size())
+            + ", expected " + to_string(expected) + ")"
+        );
     }
 
     SignalInfo data;
@@ -185,16 +191,19 @@ SignalInfo UBX::parseSIG(const vector<uint8_t> &payload) {
 
 SatelliteInfo UBX::parseSAT(const vector<uint8_t> &payload) {
     if (payload.size() < 8) {
-        std::stringstream ss("Invalid SAT payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+        throw std::invalid_argument(
+            "Invalid SAT payload (size " + to_string(payload.size()) +
+            " smaller than minimum of 8)"
+        );
     }
 
     uint8_t n_sats = payload[5];
-    if (payload.size() != 8 + (n_sats * (unsigned int)12)) {
-        std::stringstream ss("Invalid SAT payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+    size_t expected = 8 + (n_sats * 12u);
+    if (payload.size() != expected) {
+        throw std::invalid_argument(
+            "Invalid SAT payload (size " + to_string(payload.size()) +
+            ", expected " + to_string(expected) + ")"
+        );
     }
 
     SatelliteInfo data;
