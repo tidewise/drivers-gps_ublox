@@ -1,14 +1,14 @@
 #ifndef GPS_UBLOX_DRIVER_HPP
 #define GPS_UBLOX_DRIVER_HPP
 
-#include <iodrivers_base/Driver.hpp>
-#include <gps_ublox/UBX.hpp>
 #include <gps_ublox/BoardInfo.hpp>
+#include <gps_ublox/cfg.hpp>
 #include <gps_ublox/GPSData.hpp>
 #include <gps_ublox/RFInfo.hpp>
-#include <gps_ublox/SignalInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
-#include <stdexcept>
+#include <gps_ublox/SignalInfo.hpp>
+#include <gps_ublox/UBX.hpp>
+#include <iodrivers_base/Driver.hpp>
 
 namespace gps_ublox
 {
@@ -42,51 +42,6 @@ namespace gps_ublox
         public:
             template<typename T>
             void setConfigKeyValue(uint32_t key_id, T state, bool persist = false);
-
-            /** Identifies the device's ports
-             */
-            enum DevicePort {
-                PORT_I2C = 0x10710000,
-                PORT_SPI = 0x10790000,
-                PORT_UART1 = 0x10730000,
-                PORT_UART2 = 0x10750000,
-                PORT_USB = 0x10770000
-            };
-
-            /** The protocols supported by the device
-             */
-            enum DeviceProtocol {
-                PROTOCOL_UBX = 1,
-                PROTOCOL_NMEA = 2,
-                PROTOCOL_RTCM3X = 4
-            };
-
-            /** Odometer profile enumeration
-             */
-            enum OdometerProfile {
-                ODOM_RUNNING = 0,
-                ODOM_CYCLING,
-                ODOM_SWIMMING,
-                ODOM_CAR,
-                ODOM_CUSTOM
-            };
-
-            /** Data direction
-             */
-            enum DataDirection {
-                DIRECTION_INPUT = 0,
-                DIRECTION_OUTPUT = 0x00010000,
-            };
-
-            /** Message types
-             */
-            enum MessageOutputType {
-                MSGOUT_NAV_PVT = 0x20910006,
-                MSGOUT_NAV_SAT = 0x20910015,
-                MSGOUT_NAV_SIG = 0x20910345,
-                MSGOUT_MON_RF = 0x20910359
-            };
-
 
             Driver();
 

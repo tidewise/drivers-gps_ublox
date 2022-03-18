@@ -6,18 +6,18 @@
 using namespace std;
 using namespace gps_ublox;
 
-static const map<string, Driver::DevicePort> PORT_S_TO_E = {
-    { "i2c", Driver::PORT_I2C },
-    { "spi", Driver::PORT_SPI },
-    { "uart1", Driver::PORT_UART1 },
-    { "uart2", Driver::PORT_UART2 },
-    { "usb", Driver::PORT_USB }
+static const map<string, DevicePort> PORT_S_TO_E = {
+    { "i2c", PORT_I2C },
+    { "spi", PORT_SPI },
+    { "uart1", PORT_UART1 },
+    { "uart2", PORT_UART2 },
+    { "usb", PORT_USB }
 };
 
-static const map<string, Driver::DeviceProtocol> PROTOCOL_S_TO_E = {
-    { "ubx", Driver::PROTOCOL_UBX },
-    { "nmea", Driver::PROTOCOL_NMEA },
-    { "rtcm3x", Driver::PROTOCOL_RTCM3X }
+static const map<string, DeviceProtocol> PROTOCOL_S_TO_E = {
+    { "ubx", PROTOCOL_UBX },
+    { "nmea", PROTOCOL_NMEA },
+    { "rtcm3x", PROTOCOL_RTCM3X }
 };
 
 static const map<GPSData::GNSSFixType, string> FIX_TO_STRING = {
@@ -141,13 +141,13 @@ int main(int argc, char** argv)
         }
         driver.openURI(uri);
         driver.setPortProtocol(PORT_S_TO_E.at(port),
-                               input ? Driver::DIRECTION_INPUT : Driver::DIRECTION_OUTPUT,
+                               input ? DIRECTION_INPUT : DIRECTION_OUTPUT,
                                PROTOCOL_S_TO_E.at(protocol),
                                enable);
     } else if (cmd == "poll-solution") {
         driver.openURI(uri);
-        driver.setPortProtocol(Driver::PORT_USB, Driver::DIRECTION_OUTPUT, Driver::PROTOCOL_UBX, true, false);
-        driver.setOutputRate(Driver::PORT_USB, Driver::MSGOUT_NAV_PVT, 1, false);
+        driver.setPortProtocol(PORT_USB, DIRECTION_OUTPUT, PROTOCOL_UBX, true, false);
+        driver.setOutputRate(PORT_USB, MSGOUT_NAV_PVT, 1, false);
         driver.setReadTimeout(base::Time::fromSeconds(2));
 
         cout << "Lat Lon Height HAboveMSL Fix" << endl;

@@ -33,10 +33,10 @@ TEST_F(DriverTest, it_enables_a_device_port) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket(USB_ENABLED, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(cfg::USB_ENABLED, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
-    driver.setPortEnabled(Driver::PORT_USB, true);
+    driver.setPortEnabled(PORT_USB, true);
 }
 
 TEST_F(DriverTest, it_disables_a_device_port) {
@@ -48,10 +48,10 @@ TEST_F(DriverTest, it_disables_a_device_port) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket(SPI_ENABLED, false, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(cfg::SPI_ENABLED, false, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
-    driver.setPortEnabled(Driver::PORT_SPI, false);
+    driver.setPortEnabled(PORT_SPI, false);
 }
 
 TEST_F(DriverTest, it_throws_if_valset_is_rejected) {
@@ -63,10 +63,10 @@ TEST_F(DriverTest, it_throws_if_valset_is_rejected) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket(USB_ENABLED, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(cfg::USB_ENABLED, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
-    ASSERT_THROW(driver.setPortEnabled(Driver::PORT_USB, true), ConfigValueSetError);
+    ASSERT_THROW(driver.setPortEnabled(PORT_USB, true), ConfigValueSetError);
 }
 
 TEST_F(DriverTest, it_throws_if_an_valset_ack_is_not_received) {
@@ -78,10 +78,10 @@ TEST_F(DriverTest, it_throws_if_an_valset_ack_is_not_received) {
     frame.payload.push_back(MSG_CLASS_ACK);
     frame.payload.push_back(MSG_ID_NACK);
 
-    vector<uint8_t> packet = getConfigValueSetPacket(USB_ENABLED, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(cfg::USB_ENABLED, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
-    ASSERT_THROW(driver.setPortEnabled(Driver::PORT_USB, true), iodrivers_base::TimeoutError);
+    ASSERT_THROW(driver.setPortEnabled(PORT_USB, true), iodrivers_base::TimeoutError);
 }
 
 TEST_F(DriverTest, it_keeps_reading_until_an_ack_is_received) {
@@ -97,7 +97,7 @@ TEST_F(DriverTest, it_keeps_reading_until_an_ack_is_received) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
     pushDataToDriver(frame.toPacket());
-    driver.setPortEnabled(Driver::PORT_USB, true);
+    driver.setPortEnabled(PORT_USB, true);
 }
 
 TEST_F(DriverTest, it_enables_nmea_output_on_i2c) {
@@ -108,12 +108,7 @@ TEST_F(DriverTest, it_enables_nmea_output_on_i2c) {
     frame.payload.push_back(MSG_ID_VALSET);
 
     pushDataToDriver(frame.toPacket());
-    driver.setPortProtocol(
-        Driver::PORT_I2C,
-        Driver::DIRECTION_OUTPUT,
-        Driver::PROTOCOL_NMEA,
-        true,
-        true);
+    driver.setPortProtocol(PORT_I2C, DIRECTION_OUTPUT, PROTOCOL_NMEA, true, true);
 
     ASSERT_EQ(getConfigValueSetPacket(0x10720002, true, true), readDataFromDriver());
 }
@@ -126,12 +121,7 @@ TEST_F(DriverTest, it_disables_ubx_input_on_usb) {
     frame.payload.push_back(MSG_ID_VALSET);
 
     pushDataToDriver(frame.toPacket());
-    driver.setPortProtocol(
-        Driver::PORT_USB,
-        Driver::DIRECTION_INPUT,
-        Driver::PROTOCOL_UBX,
-        false,
-        true);
+    driver.setPortProtocol(PORT_USB, DIRECTION_INPUT, PROTOCOL_UBX, false, true);
 
     ASSERT_EQ(getConfigValueSetPacket(0x10770001, false, true), readDataFromDriver());
 }
@@ -144,12 +134,7 @@ TEST_F(DriverTest, it_enables_rtcm_input_on_uart1) {
     frame.payload.push_back(MSG_ID_VALSET);
 
     pushDataToDriver(frame.toPacket());
-    driver.setPortProtocol(
-        Driver::PORT_UART1,
-        Driver::DIRECTION_INPUT,
-        Driver::PROTOCOL_RTCM3X,
-        true,
-        false);
+    driver.setPortProtocol(PORT_UART1, DIRECTION_INPUT, PROTOCOL_RTCM3X, true, false);
 
     ASSERT_EQ(getConfigValueSetPacket(0x10730004, true, false), readDataFromDriver());
 }
@@ -162,12 +147,7 @@ TEST_F(DriverTest, it_enables_rtcm_output_on_uart2) {
     frame.payload.push_back(MSG_ID_VALSET);
 
     pushDataToDriver(frame.toPacket());
-    driver.setPortProtocol(
-        Driver::PORT_UART2,
-        Driver::DIRECTION_OUTPUT,
-        Driver::PROTOCOL_RTCM3X,
-        true,
-        false);
+    driver.setPortProtocol(PORT_UART2, DIRECTION_OUTPUT, PROTOCOL_RTCM3X, true, false);
 
     ASSERT_EQ(getConfigValueSetPacket(0x10760004, true, false), readDataFromDriver());
 }
@@ -180,12 +160,7 @@ TEST_F(DriverTest, it_enables_nmea_output_on_spi) {
     frame.payload.push_back(MSG_ID_VALSET);
 
     pushDataToDriver(frame.toPacket());
-    driver.setPortProtocol(
-        Driver::PORT_SPI,
-        Driver::DIRECTION_OUTPUT,
-        Driver::PROTOCOL_NMEA,
-        true,
-        false);
+    driver.setPortProtocol(PORT_SPI, DIRECTION_OUTPUT, PROTOCOL_NMEA, true, false);
 
     ASSERT_EQ(getConfigValueSetPacket(0x107a0002, true, false), readDataFromDriver());
 }
@@ -199,7 +174,7 @@ TEST_F(DriverTest, it_enables_odometer) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket(ODO_USE_ODO, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(cfg::ODO_USE_ODO, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setOdometer(true);
@@ -214,7 +189,7 @@ TEST_F(DriverTest, it_enables_heading_filter) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket(ODO_USE_COG, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(cfg::ODO_USE_COG, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setLowSpeedCourseOverGroundFilter(true);
@@ -229,7 +204,7 @@ TEST_F(DriverTest, it_enables_lowpass_filtered_velocity_output) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket(ODO_OUTLPVEL, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(cfg::ODO_OUTLPVEL, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setOutputLowPassFilteredVelocity(true);
@@ -244,7 +219,7 @@ TEST_F(DriverTest, it_enables_lowpass_filtered_heading_output) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket(ODO_OUTLPCOG, true, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(cfg::ODO_OUTLPCOG, true, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setOutputLowPassFilteredHeading(true);
@@ -259,10 +234,10 @@ TEST_F(DriverTest, it_sets_odometer_profile) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(ODO_PROFILE, 3, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(cfg::ODO_PROFILE, 3, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
-    driver.setOdometerProfile(Driver::ODOM_CAR, true);
+    driver.setOdometerProfile(ODOM_CAR, true);
 }
 
 TEST_F(DriverTest, it_sets_upper_speed_limit_for_heading_filter) {
@@ -274,7 +249,7 @@ TEST_F(DriverTest, it_sets_upper_speed_limit_for_heading_filter) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(ODO_COGMAXSPEED, 33, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(cfg::ODO_COGMAXSPEED, 33, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setUpperSpeedLimitForHeadingFilter(33, true);
@@ -289,7 +264,7 @@ TEST_F(DriverTest, it_sets_max_position_accuracy_for_heading_filter) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(ODO_COGMAXPOSACC, 12, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(cfg::ODO_COGMAXPOSACC, 12, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setMaxPositionAccuracyForLowSpeedHeadingFilter(12, true);
@@ -304,7 +279,7 @@ TEST_F(DriverTest, it_sets_velocity_lowpass_filter_level) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(ODO_VELLPGAIN, 23, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(cfg::ODO_VELLPGAIN, 23, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setVelocityLowPassFilterLevel(23, true);
@@ -319,7 +294,7 @@ TEST_F(DriverTest, it_sets_heading_lowpass_filter_level) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(ODO_COGLPGAIN, 3, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(cfg::ODO_COGLPGAIN, 3, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setHeadingLowPassFilterLevel(3, true);
@@ -360,7 +335,7 @@ TEST_F(DriverTest, it_sets_position_measurement_period) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint16_t>(RATE_MEAS, 100, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint16_t>(cfg::RATE_MEAS, 100, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setPositionMeasurementPeriod(100, true);
@@ -379,7 +354,7 @@ TEST_F(DriverTest, it_sets_number_of_measurments_per_solution) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint16_t>(RATE_NAV, 93, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint16_t>(cfg::RATE_NAV, 93, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setMeasurementsPerSolutionRatio(93, true);
@@ -394,7 +369,7 @@ TEST_F(DriverTest, it_sets_the_time_system_used_to_aligh_measurements) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(RATE_TIMEREF, 2, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(cfg::RATE_TIMEREF, 2, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setTimeSystem(UBX::GLONASS, true);
@@ -409,7 +384,7 @@ TEST_F(DriverTest, it_sets_the_dynamic_platform_model) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(NAVSPG_DYNMODEL, 4, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(cfg::NAVSPG_DYNMODEL, 4, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setDynamicModel(UBX::AUTOMOTIVE, true);
@@ -424,7 +399,7 @@ TEST_F(DriverTest, it_sets_the_speed_threshold) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(MOT_GNSSSPEED_THRS, 5, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(cfg::MOT_GNSSSPEED_THRS, 5, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setSpeedThreshold(5, true);
@@ -439,7 +414,7 @@ TEST_F(DriverTest, it_sets_the_distance_threshold) {
     frame.payload.push_back(MSG_CLASS_CFG);
     frame.payload.push_back(MSG_ID_VALSET);
 
-    vector<uint8_t> packet = getConfigValueSetPacket<uint16_t>(MOT_GNSSDIST_THRS, 3, true);
+    vector<uint8_t> packet = getConfigValueSetPacket<uint16_t>(cfg::MOT_GNSSDIST_THRS, 3, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.setStaticHoldDistanceThreshold(3, true);
@@ -514,11 +489,7 @@ TEST_F(DriverTest, it_sets_output_rate_of_pvt_on_i2c) {
     frame.payload.push_back(MSG_ID_VALSET);
 
     pushDataToDriver(frame.toPacket());
-    driver.setOutputRate(
-        Driver::PORT_I2C,
-        Driver::MSGOUT_NAV_PVT,
-        2,
-        false);
+    driver.setOutputRate(PORT_I2C, MSGOUT_NAV_PVT, 2, false);
 
     ASSERT_EQ(getConfigValueSetPacket(0x20910006, (uint8_t)2, false), readDataFromDriver());
 }
@@ -531,11 +502,7 @@ TEST_F(DriverTest, it_sets_output_rate_of_sig_on_i2c) {
     frame.payload.push_back(MSG_ID_VALSET);
 
     pushDataToDriver(frame.toPacket());
-    driver.setOutputRate(
-        Driver::PORT_I2C,
-        Driver::MSGOUT_NAV_SIG,
-        5,
-        false);
+    driver.setOutputRate(PORT_I2C, MSGOUT_NAV_SIG, 5, false);
 
     ASSERT_EQ(getConfigValueSetPacket(0x20910345, (uint8_t)5, false), readDataFromDriver());
 }
@@ -548,11 +515,7 @@ TEST_F(DriverTest, it_sets_output_rate_of_rf_on_i2c) {
     frame.payload.push_back(MSG_ID_VALSET);
 
     pushDataToDriver(frame.toPacket());
-    driver.setOutputRate(
-        Driver::PORT_I2C,
-        Driver::MSGOUT_MON_RF,
-        1,
-        true);
+    driver.setOutputRate(PORT_I2C, MSGOUT_MON_RF, 1, true);
 
     ASSERT_EQ(getConfigValueSetPacket(0x20910359, (uint8_t)1, true), readDataFromDriver());
 }
@@ -565,11 +528,7 @@ TEST_F(DriverTest, it_sets_output_rate_of_rf_on_spi) {
     frame.payload.push_back(MSG_ID_VALSET);
 
     pushDataToDriver(frame.toPacket());
-    driver.setOutputRate(
-        Driver::PORT_SPI,
-        Driver::MSGOUT_MON_RF,
-        1,
-        true);
+    driver.setOutputRate(PORT_SPI, MSGOUT_MON_RF, 1, true);
 
     ASSERT_EQ(getConfigValueSetPacket(0x2091035d, (uint8_t)1, true), readDataFromDriver());
 }
