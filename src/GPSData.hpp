@@ -11,7 +11,6 @@ namespace gps_ublox {
      * GPS data
      */
     struct GPSData {
-
         enum GNSSFixType {
             NO_FIX = 0,
             DEAD_RECKONING = 1,
@@ -19,6 +18,13 @@ namespace gps_ublox {
             FIX_3D = 3,
             GNSS_PLUS_DEAD_RECKONING = 4,
             TIME_ONLY = 5
+        };
+
+        enum GNSSFixFlags {
+            FIX_OK = 1,
+            FIX_DIFFERENTIAL = 2,
+            FIX_RTK_FLOAT = 64,
+            FIX_RTK_FIXED = 128
         };
 
         uint32_t time_of_week;  // in milliseconds
