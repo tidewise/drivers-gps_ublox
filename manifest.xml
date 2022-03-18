@@ -3,15 +3,13 @@
     Driver library for u-blox GPS modules
   </description>
   <version>0.1</version>
+  <maintainer>Sylvain Joyeux/sylvain.joyeux@tidewise.io</maintainer>
   <author>Gabriel Arjones/gabriel.arjones@tidewise.io</author>
   <license>3-clause BSD</license>
-  <copyright>
-    TideWise
-  </copyright>
-  <url>http://</url>
-  <logo>http://</logo>
+  <copyright>TideWise</copyright>
   <depend package="base/cmake" />
   <depend package="base/types" />
+  <depend package="drivers/gps_base" />
   <depend package="drivers/iodrivers_base" />
   <test_depend package="google-test" />
 </package>

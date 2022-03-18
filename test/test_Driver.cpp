@@ -532,3 +532,22 @@ TEST_F(DriverTest, it_sets_output_rate_of_rf_on_spi) {
 
     ASSERT_EQ(getConfigValueSetPacket(0x2091035d, (uint8_t)1, true), readDataFromDriver());
 }
+
+TEST_F(DriverTest, it_parses_RTCM_messages_data_received_between_UBX_frames_but_ignores_them_in_readFrame) {
+    const std::vector<uint8_t> rtcm =
+    {
+        0xd3, 0x00, 0x13, 0x3e, 0xd0, 0x00, 0x02, 0x36,
+        0xfd, 0xb8, 0x0d, 0xde, 0x08, 0x00, 0x5b, 0x2b,
+        0xc1, 0x08, 0xa7, 0xb9, 0x8d, 0x3d, 0xd8, 0xab, 0x37
+    };
+    pushDataToDriver(rtcm);
+
+    Frame frame;
+    frame.msg_class = MSG_CLASS_NAV;
+    frame.msg_id = MSG_ID_SIG;
+    frame.payload.resize(8, 0);
+    pushDataToDriver(frame.toPacket());
+
+    driver.readFrame();
+    ASSERT_EQ(0, driver.getStats().bad_rx);
+}

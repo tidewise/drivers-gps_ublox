@@ -3,7 +3,7 @@ rock_library(gps_ublox
     HEADERS Driver.hpp UBX.hpp Driver.hpp
       BoardInfo.hpp SignalInfo.hpp RFInfo.hpp GPSData.hpp SatelliteInfo.hpp
       cfg.hpp
-    DEPS_PKGCONFIG iodrivers_base base-types)
+    DEPS_PKGCONFIG iodrivers_base base-types gps_base)
 
 rock_executable(gps_ublox_ctl Main.cpp
     DEPS gps_ublox)

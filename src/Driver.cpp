@@ -1,3 +1,4 @@
+#include <gps_base/rtcm3.hpp>
 #include <gps_ublox/BoardInfo.hpp>
 #include <gps_ublox/cfg.hpp>
 #include <gps_ublox/Driver.hpp>
@@ -18,7 +19,15 @@ Driver::Driver() : iodrivers_base::Driver(BUFFER_SIZE)
 
 int Driver::extractPacket(const uint8_t *buffer, size_t buffer_size) const
 {
-    return UBX::extractPacket(buffer, buffer_size);
+    if (buffer_size == 0) {
+        return 0;
+    }
+    else if (gps_base::rtcm3::isPreamble(buffer, buffer_size)) {
+        return gps_base::rtcm3::extractPacket(buffer, buffer_size);
+    }
+    else {
+        return UBX::extractPacket(buffer, buffer_size);
+    }
 }
 
 BoardInfo Driver::readBoardInfo() {
@@ -64,6 +73,10 @@ Frame Driver::waitForPacket(const uint8_t *class_id, const uint8_t *msg_id,
     while (base::Time::now() < deadline) {
         base::Time remaining = deadline - base::Time::now();
         int bytes = readPacket(mReadBuffer, BUFFER_SIZE, remaining);
+
+        if (gps_base::rtcm3::isPreamble(mReadBuffer, bytes)) {
+            continue;
+        }
 
         Frame frame = Frame::fromPacket(mReadBuffer, bytes);
         if (class_id && *class_id != frame.msg_class) continue;
