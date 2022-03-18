@@ -118,6 +118,10 @@ void Driver::setOutputRate(DevicePort port, MessageOutputType msg, uint8_t rate,
     setConfigKeyValue(cfg::getOutputRateKey(port, msg), rate, persist);
 }
 
+void Driver::setRTCMOutputRate(DevicePort port, uint16_t msg, uint8_t rate, bool persist) {
+    setConfigKeyValue(cfg::getRTCMOutputKey(port, msg), rate, persist);
+}
+
 void Driver::setOdometer(bool state, bool persist)
 {
     setConfigKeyValue(cfg::ODO_USE_ODO, state, persist);

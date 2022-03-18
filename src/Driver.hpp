@@ -170,6 +170,15 @@ namespace gps_ublox
              */
             void setOutputRate(DevicePort port, MessageOutputType msg, uint8_t rate, bool persist = true);
 
+            /** Sets the output rate of a RTCM message on a given port
+             *
+             * @param port Port to be toggled
+             * @param rtcm_message ID of the RTCM message
+             * @param period Message period as multiples of the measurement period. Set to zero to disable.
+             * @param persist Whether the configuration should be persisted
+             */
+            void setRTCMOutputRate(DevicePort port, uint16_t msg, uint8_t rate = 1, bool persist = true);
+
             /** Requests device version information
              */
             BoardInfo readBoardInfo();

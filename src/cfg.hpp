@@ -79,6 +79,14 @@ namespace gps_ublox {
             DevicePort port, DataDirection direction, DeviceProtocol protocol
         );
         std::uint32_t getOutputRateKey(DevicePort port, MessageOutputType type);
+
+        /** Configuration key for the RTCM messages
+         *
+         * @param rtcm ID of the RTCM messages. For the 4072.0 and .1 messages,
+         *    use 40720 and 40721 to specify which message to set. 4072 will
+         *    set 4072.0
+         */
+        std::uint32_t getRTCMOutputKey(DevicePort port, std::uint32_t rtcm);
     };
 }
 
