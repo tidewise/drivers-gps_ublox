@@ -40,6 +40,11 @@ PVT Driver::readPVT() {
     return UBX::parsePVT(frame.payload);
 }
 
+PVT Driver::waitForPVT() {
+    Frame frame = waitForFrame(MSG_CLASS_NAV, MSG_ID_PVT);
+    return UBX::parsePVT(frame.payload);
+}
+
 RFInfo Driver::readRFInfo() {
     Frame frame = pollFrame(MSG_CLASS_MON, MSG_ID_RF);
     return UBX::parseRF(frame.payload);

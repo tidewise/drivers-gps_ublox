@@ -423,7 +423,7 @@ TEST_F(DriverTest, it_sets_the_distance_threshold) {
     driver.setStaticHoldDistanceThreshold(3, true);
 }
 
-TEST_F(DriverTest, it_reads_a_pvt_message) {
+TEST_F(DriverTest, it_requests_and_reads_a_pvt_message) {
     IODRIVERS_BASE_MOCK();
     Frame frame;
     frame.msg_class = MSG_CLASS_NAV;
@@ -433,6 +433,18 @@ TEST_F(DriverTest, it_reads_a_pvt_message) {
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
     driver.readPVT();
+}
+
+TEST_F(DriverTest, it_waits_for_a_pvt_message) {
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_NAV;
+    frame.msg_id = MSG_ID_PVT;
+    toLittleEndian<uint32_t>(frame.payload, 3600); // time of week
+    frame.payload.resize(92, 0);
+    pushDataToDriver(frame.toPacket());
+    auto pvt = driver.waitForPVT();
+    ASSERT_EQ(3600, pvt.time_of_week);
 }
 
 TEST_F(DriverTest, it_requests_rf_info) {

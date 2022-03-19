@@ -210,6 +210,9 @@ namespace gps_ublox
              */
             PVT readPVT();
 
+            /** Wait for PVT frame */
+            PVT waitForPVT();
+
             /** Requests RF info
              */
             RFInfo readRFInfo();
