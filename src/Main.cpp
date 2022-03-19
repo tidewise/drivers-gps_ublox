@@ -61,7 +61,12 @@ int usage()
         << "  enable-input PORT PROTOCOL ENABLED   enable input protocol on a given port\n"
         << "  enable-output PORT PROTOCOL ENABLED  enable output protocol on a given port\n"
         << "  enable-port PORT ENABLED             enable communication on a given port\n"
-        << "  poll-solution                        poll and display solution\n"
+        << "  poll-solution [CORR_SOURCE]          poll and display solution, optionally receiving\n"
+        << "                                       corrections on the given iodrivers_base-compatible URI\n"
+        << "  poll-relposned CORR_SOURCE [--monitor-rtcm]\n"
+        << "     read and display position relative to a RTK base station (in static or\n"
+        << "     moving base mode). With --monitor-rtcm, show received RTCM messages (for\n"
+        << "     debugging of the transmission)\n"
         << "  reference-station TARGET             configure itself as a RTK reference\n"
         << "                                       station, forward RTCM messages to TARGET\n"
         << flush;
@@ -90,13 +95,10 @@ void printProtocols()
 }
 
 struct PollCallbacks : Driver::PollCallbacks {
-    int tx = 0;
-    int this_tx = 0;
-    int rx = 0;
-    int this_rx = 0;
-
     int sats = 0;
     int satsWithCorrections = 0;
+    int satsWithCarrierRange = 0;
+    int satsWithPseudoRange = 0;
 
     RTCMForwarder* rtcm_out = nullptr;
 
@@ -104,35 +106,78 @@ struct PollCallbacks : Driver::PollCallbacks {
         : rtcm_out(rtcm_out) {}
 
     void satelliteInfo(SatelliteInfo const& data) override {
-        int sats = 0, satsWithCorrections = 0;
+        int sats = 0, satsWithCorrections = 0, satsWithCarrierRange = 0, satsWithPseudoRange = 0;
         for (auto const& satinfo: data.signals) {
             if (satinfo.signal_flags & SatelliteInfo::USED_IN_SOLUTION) {
                 sats++;
                 if (satinfo.signal_flags & SatelliteInfo::RTCM_CORRECTIONS_USED) {
                     satsWithCorrections++;
                 }
+                if (satinfo.signal_flags & SatelliteInfo::CARRIER_RANGE_CORRECTIONS_USED) {
+                    satsWithCarrierRange++;
+                }
+                if (satinfo.signal_flags & SatelliteInfo::PSEUDORANGE_CORRECTIONS_USED) {
+                    satsWithPseudoRange++;
+                }
             }
         }
 
         this->sats = sats;
         this->satsWithCorrections = satsWithCorrections;
+        this->satsWithCarrierRange = satsWithCarrierRange;
+        this->satsWithPseudoRange = satsWithPseudoRange;
+    }
+
+    static void pvtHeader(std::ostream& out) {
+        out
+            << left
+            << setw(18) << "Time" << " "
+            << setw(9) << "Lat" << " "
+            << setw(9) << "Lon" << " "
+            << setw(7) << "H+Ellip" << " "
+            << setw(7) << "H+MSL" << " "
+            << setw(7) << "Fix" << " "
+            << setw(1) << "D" << " "
+            << setw(5) << "RTK" << " "
+            << setw(4) << "Sats" << " "
+            << setw(4) << "S/C" << " "
+            << setw(4) << "S/PR" << " "
+            << setw(4) << "S/CR" << "\n";
     }
 
     void pvt(PVT const& pvt) override {
         string fix_type = FIX_TYPE_TO_STRING.at(pvt.fix_type);
-        for (auto const& flag: PVT_FIX_FLAG_TO_STRING) {
-            if ((flag.first & pvt.fix_flags) == flag.first) {
-                fix_type += "/" + flag.second;
-            }
+
+        string differential = "N";
+        if (pvt.fix_flags & PVT::FIX_DIFFERENTIAL) {
+            differential = "Y";
         }
 
-        tx += this_tx;
+        string rtk = "N";
+        if (pvt.fix_flags & PVT::FIX_RTK_FLOAT) {
+            rtk = "Float";
+        }
+        else if (pvt.fix_flags & PVT::FIX_RTK_FIXED) {
+            rtk = "Fixed";
+        }
+
+
         std::cout
+            << left
             << base::Time::now() << " "
-            << fixed << setw(5) << pvt.latitude.getDeg() << " " << pvt.longitude.getDeg() << " "
-            << pvt.height << " " << pvt.height_above_mean_sea_level << " "
-            << fix_type << " " << tx << " " << this_tx << "\n";
-        this_tx = 0;
+            << fixed << setprecision(5)
+            << setw(9) << pvt.latitude.getDeg() << " "
+            << setw(9) << pvt.longitude.getDeg() << " "
+            << fixed << setprecision(2)
+            << setw(7) << pvt.height << " "
+            << setw(7) << pvt.height_above_mean_sea_level << " "
+            << setw(7) << fix_type << " "
+            << setw(1) << differential << " "
+            << setw(5) << rtk << " "
+            << setw(4) << sats << " "
+            << setw(4) << satsWithCorrections << " "
+            << setw(4) << satsWithPseudoRange << " "
+            << setw(4) << satsWithCarrierRange << "\n";
     }
 
     void rtcm(uint8_t const* buffer, size_t size) override {
@@ -140,51 +185,86 @@ struct PollCallbacks : Driver::PollCallbacks {
             return;
         }
 
-        this_tx += size;
         rtcm_out->writePacket(buffer, size);
     }
 
     void rtcmReceivedMessage(RTCMReceivedMessage const& message) override {
-        string flags = "";
+        cout << base::Time::now() << " RTCM " << message.message_type;
+
         if (message.flags & RTCMReceivedMessage::MESSAGE_NOT_USED) {
-            flags = "NOT_USED";
+            cout << " NOT_USED";
         }
         else if (message.flags & RTCMReceivedMessage::MESSAGE_USED) {
-            flags = "USED";
+            cout << " USED";
         }
         else {
-            flags = "USAGE_UNKNOWN";
+            cout << " USAGE_UNKNOWN";
         }
         if (message.flags & RTCMReceivedMessage::CRC_FAILED) {
-            flags += "/CRC_FAILED";
+            cout << " CRC_FAILED";
         }
 
+        if (message.reference_station_id != 0xffff) {
+            cout << " ref_station_id=" << message.reference_station_id;
+        }
+        cout << "\n";
+    }
 
-        std::cout << message.time << " RTCM" << message.message_type << " " << flags << "\n";
-
+    static void relposnedHeader(std::ostream& out) {
+        out
+            << left
+            << setw(18) << "Time" << " "
+            << setw(6) << "X" << " "
+            << setw(6) << "Y" << " "
+            << setw(6) << "Z" << " "
+            << setw(6) << "L" << " "
+            << setw(5) << "Hdg" << " "
+            << setw(1) << "D" << " "
+            << setw(5) << "RTK" << " "
+            << setw(3) << "Mov" << " "
+            << setw(4) << "Sats" << " "
+            << setw(4) << "S/C" << " "
+            << setw(4) << "S/PR" << " "
+            << setw(4) << "S/CR" << "\n";
     }
 
     void relposned(RelPosNED const& data) override {
-        string flags;
-        for (auto const& flag: RELPOSNED_FLAG_TO_STRING) {
-            if ((flag.first & data.flags) == flag.first) {
-                if (!flags.empty()) {
-                    flags += "/";
-                }
-                flags += flag.second;
-            }
+        string differential = "N";
+        if (data.flags & RelPosNED::FLAGS_USE_DIFFERENTIAL) {
+            differential = "Y";
         }
 
-        rx += this_rx;
+        string moving = "N";
+        if (data.flags & RelPosNED::FLAGS_MOVING_BASE) {
+            moving = "Y";
+        }
+
+        string rtk = "N";
+        if (data.flags & RelPosNED::FLAGS_RTK_FLOAT) {
+            rtk = "Float";
+        }
+        else if (data.flags & RelPosNED::FLAGS_RTK_FIXED) {
+            rtk = "Fixed";
+        }
 
         auto relpos = data.relative_position_NED;
         std::cout
+            << left
             << base::Time::now() << " "
-            << relpos.x() << " " << relpos.y() << " " << relpos.z() << " "
-            << data.relative_position_length << "m " << data.relative_position_heading << " "
-            << flags << " " << rx << " " << this_rx << " "
-            << sats << "/" << satsWithCorrections << "\n";
-        this_rx = 0;
+            << fixed << setprecision(2)
+            << setw(6) << relpos.x() << " "
+            << setw(6) << relpos.y() << " "
+            << setw(6) << relpos.z() << " "
+            << setw(6) << data.relative_position_length << " "
+            << fixed << setprecision(1)
+            << setw(5) << data.relative_position_heading.getDeg() << " "
+            << setw(1) << differential << " "
+            << setw(5) << rtk << " "
+            << setw(3) << moving << " "
+            << setw(4) << sats << " "
+            << setw(4) << satsWithCorrections << " "
+            << setw(4) << satsWithPseudoRange << " "
+            << setw(4) << satsWithCarrierRange << "\n";
     }
 };
 
@@ -197,6 +277,7 @@ void setDefaults(Driver& driver) {
     driver.setOutputRate(PORT_USB, MSGOUT_NAV_PVT, 0, false);
     driver.setOutputRate(PORT_USB, MSGOUT_NAV_RELPOSNED, 0, false);
     driver.setOutputRate(PORT_USB, MSGOUT_NAV_SAT, 0, false);
+    driver.setOutputRate(PORT_USB, MSGOUT_RXM_RTCM, 0, false);
     driver.setReadTimeout(base::Time::fromMilliseconds(2000));
 }
 
@@ -224,7 +305,6 @@ void poll(Driver& driver, RTCMForwarder* rtcm_in, RTCMForwarder* rtcm_out) {
         if (fds[1].revents & POLLIN) {
             do {
                 size_t s = rtcm_in->readPacket(rtcmBuffer, 4096, base::Time::fromMilliseconds(10));
-                callbacks.this_rx += s;
                 driver.writePacket(rtcmBuffer, s);
             }
             while (rtcm_in->hasPacket());
@@ -330,12 +410,20 @@ int main(int argc, char** argv)
         driver.setOutputRate(PORT_USB, MSGOUT_NAV_SAT, 5, false);
         driver.setReadTimeout(base::Time::fromSeconds(2));
 
-        cout << "Lat Lon Height HAboveMSL Fix" << endl;
+        PollCallbacks::pvtHeader(cout);
         poll(driver, (rtcm_in.isValid() ? &rtcm_in : nullptr), nullptr);
     } else if (cmd == "poll-relposned") {
-        if (argc != 4) {
+        bool monitor_rtcm = false;
+        if (argc < 4 || argc > 5) {
             usage();
             return 1;
+        }
+        else if (argc == 5) {
+            if (argv[4] != string("--monitor-rtcm")) {
+                usage();
+                return 1;
+            }
+            monitor_rtcm = true;
         }
 
         string rtk_source = argv[3];
@@ -346,9 +434,12 @@ int main(int argc, char** argv)
         setDefaults(driver);
         driver.setOutputRate(PORT_USB, MSGOUT_NAV_RELPOSNED, 1, false);
         driver.setOutputRate(PORT_USB, MSGOUT_NAV_SAT, 5, false);
+        if (monitor_rtcm) {
+            driver.setOutputRate(PORT_USB, MSGOUT_RXM_RTCM, 1, false);
+        }
         driver.setReadTimeout(base::Time::fromMilliseconds(2000));
 
-        cout << "Lat Lon Height HAboveMSL Fix" << endl;
+        PollCallbacks::relposnedHeader(cout);
         poll(driver, &rtcm_in, nullptr);
     } else if (cmd == "reference-station") {
         if (argc != 4) {
@@ -373,7 +464,7 @@ int main(int argc, char** argv)
         driver.setRTCMOutputRate(PORT_USB, 4072, 1, false);
         driver.setReadTimeout(base::Time::fromSeconds(2));
 
-        cout << "Lat Lon Height HAboveMSL Fix TX" << endl;
+        PollCallbacks::pvtHeader(cout);
         poll(driver, nullptr, &rtcm_out);
     } else {
         cerr << "unexpected command " << cmd << endl;
