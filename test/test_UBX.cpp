@@ -145,8 +145,7 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
     toLittleEndian<uint32_t>(payload, 233);  // speed accuracy
     toLittleEndian<uint32_t>(payload, 83200);  // heading accuracy
     toLittleEndian<uint16_t>(payload, 421);  // position dop
-    toLittleEndian<uint8_t>(payload, 7);  // additional flags
-    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint16_t>(payload, 4 << 1);  // flags3
     toLittleEndian<uint8_t>(payload, 0);
     toLittleEndian<uint8_t>(payload, 0);
     toLittleEndian<uint8_t>(payload, 0);
@@ -179,7 +178,8 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
     ASSERT_FLOAT_EQ(0.233, data.speed_accuracy);
     ASSERT_FLOAT_EQ(0.832, data.heading_accuracy.getDeg());
     ASSERT_FLOAT_EQ(4.21, data.position_dop);
-    ASSERT_FLOAT_EQ(7, data.more_flags);
+    ASSERT_EQ(4 << 1, data.more_flags);
+    ASSERT_EQ(base::Time::fromSeconds(5), data.age_of_differential_corrections);
     ASSERT_FLOAT_EQ(0.93, data.heading_of_vehicle.getDeg());
     ASSERT_FLOAT_EQ(7.51, data.magnetic_declination.getDeg());
     ASSERT_FLOAT_EQ(5.31, data.magnetic_declination_accuracy.getDeg());

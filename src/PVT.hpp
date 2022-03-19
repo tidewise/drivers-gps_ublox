@@ -34,6 +34,7 @@ namespace gps_ublox {
         GNSSFixType fix_type;
         uint8_t fix_flags;
         uint8_t additional_flags;
+        base::Time age_of_differential_corrections;
         uint8_t num_sats;
         base::Angle longitude;  // in rad
         base::Angle latitude;  // in rad

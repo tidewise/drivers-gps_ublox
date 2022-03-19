@@ -223,6 +223,25 @@ SatelliteInfo UBX::parseSAT(const vector<uint8_t> &payload) {
     return data;
 }
 
+const base::Time CORRECTION_AGE[] = {
+    base::Time::fromSeconds(9999),
+    base::Time::fromSeconds(0),
+    base::Time::fromSeconds(1),
+    base::Time::fromSeconds(2),
+    base::Time::fromSeconds(5),
+    base::Time::fromSeconds(10),
+    base::Time::fromSeconds(15),
+    base::Time::fromSeconds(20),
+    base::Time::fromSeconds(30),
+    base::Time::fromSeconds(45),
+    base::Time::fromSeconds(60),
+    base::Time::fromSeconds(90),
+    base::Time::fromSeconds(120),
+    base::Time::fromSeconds(120),
+    base::Time::fromSeconds(120),
+    base::Time::fromSeconds(120)
+};
+
 PVT UBX::parsePVT(const vector<uint8_t> &payload) {
     if (payload.size() != 92) {
         std::stringstream ss;
@@ -267,6 +286,7 @@ PVT UBX::parsePVT(const vector<uint8_t> &payload) {
     data.heading_accuracy = base::Angle::fromDeg((double)fromLittleEndian<uint32_t>(&payload[72]) * 1e-5);
     data.position_dop = (double)fromLittleEndian<uint16_t>(&payload[76]) * 0.01;
     data.more_flags = fromLittleEndian<uint8_t>(&payload[78]);
+    data.age_of_differential_corrections = CORRECTION_AGE[(data.more_flags >> 1) & 0xF];
     data.heading_of_vehicle = base::Angle::fromDeg((double)fromLittleEndian<int32_t>(&payload[84]) * 1e-5);
     data.magnetic_declination = base::Angle::fromDeg((double)fromLittleEndian<int16_t>(&payload[88]) * 1e-2);
     data.magnetic_declination_accuracy = base::Angle::fromDeg((double)fromLittleEndian<uint16_t>(&payload[90]) * 1e-2);
