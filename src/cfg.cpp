@@ -54,7 +54,7 @@ static const RTCMConfig RTCM_MESSAGES[] = {
     { 1005, 0x2bd }, // Stationary RTK reference station ARP
     { 1074, 0x35e }, //
     { 1077, 0x2cc },
-    { 1084, 0x367 },
+    { 1084, 0x363 },
     { 1087, 0x2d1 },
     { 1094, 0x368 },
     { 1097, 0x318 },
