@@ -144,6 +144,26 @@ struct PollCallbacks : Driver::PollCallbacks {
         rtcm_out->writePacket(buffer, size);
     }
 
+    void rtcmReceivedMessage(RTCMReceivedMessage const& message) override {
+        string flags = "";
+        if (message.flags & RTCMReceivedMessage::MESSAGE_NOT_USED) {
+            flags = "NOT_USED";
+        }
+        else if (message.flags & RTCMReceivedMessage::MESSAGE_USED) {
+            flags = "USED";
+        }
+        else {
+            flags = "USAGE_UNKNOWN";
+        }
+        if (message.flags & RTCMReceivedMessage::CRC_FAILED) {
+            flags += "/CRC_FAILED";
+        }
+
+
+        std::cout << message.time << " RTCM" << message.message_type << " " << flags << "\n";
+
+    }
+
     void relposned(RelPosNED const& data) override {
         string flags;
         for (auto const& flag: RELPOSNED_FLAG_TO_STRING) {

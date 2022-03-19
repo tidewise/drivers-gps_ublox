@@ -443,3 +443,45 @@ TEST_F(UBXTest, it_does_not_fill_the_relative_position_length_and_angle_if_they_
 
     ASSERT_EQ(1 | 2 | 4 | 512, data.flags);
 }
+
+TEST_F(UBXTest, it_throws_if_the_RXM_RTCM_payload_is_too_small) {
+    vector<uint8_t> payload;
+    payload.resize(7);
+    ASSERT_THROW(UBX::parseRTCMReceivedMessage(payload), std::invalid_argument);
+}
+
+TEST_F(UBXTest, it_throws_if_the_RXM_RTCM_payload_is_too_big) {
+    vector<uint8_t> payload;
+    payload.resize(9);
+    ASSERT_THROW(UBX::parseRTCMReceivedMessage(payload), std::invalid_argument);
+}
+
+TEST_F(UBXTest, it_parses_a_RXM_RTCM_message) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 2); // version
+    toLittleEndian<uint8_t>(payload, 9); // reserved0
+    toLittleEndian<uint16_t>(payload, 0); // subtype
+    toLittleEndian<uint16_t>(payload, 524); // reference station
+    toLittleEndian<uint16_t>(payload, 1084); // message type
+
+    auto data = UBX::parseRTCMReceivedMessage(payload);
+
+    ASSERT_EQ(524, data.reference_station_id);
+    ASSERT_EQ(9, data.flags);
+    ASSERT_EQ(1084, data.message_type);
+}
+
+TEST_F(UBXTest, it_encodes_the_4072_message_with_its_subtype) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 2); // version
+    toLittleEndian<uint8_t>(payload, 9); // flags
+    toLittleEndian<uint16_t>(payload, 1); // subtype
+    toLittleEndian<uint16_t>(payload, 524); // reference station
+    toLittleEndian<uint16_t>(payload, 4072); // message type
+
+    auto data = UBX::parseRTCMReceivedMessage(payload);
+
+    ASSERT_EQ(524, data.reference_station_id);
+    ASSERT_EQ(9, data.flags);
+    ASSERT_EQ(40721, data.message_type);
+}

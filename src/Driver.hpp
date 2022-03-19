@@ -26,6 +26,7 @@ namespace gps_ublox
                 virtual ~PollCallbacks() {}
 
                 virtual void rtcm(uint8_t const* buffer, size_t size) {};
+                virtual void rtcmReceivedMessage(RTCMReceivedMessage const& info) {};
                 virtual void pvt(PVT const& pvt) {};
                 virtual void relposned(RelPosNED const& relposned) {};
                 virtual void satelliteInfo(SatelliteInfo const& info) {};

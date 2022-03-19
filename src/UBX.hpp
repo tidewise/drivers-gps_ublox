@@ -10,6 +10,7 @@
 #include <gps_ublox/PVT.hpp>
 #include <gps_ublox/RelPosNED.hpp>
 #include <gps_ublox/RFInfo.hpp>
+#include <gps_ublox/RTCMReceivedMessage.hpp>
 #include <gps_ublox/SignalInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
 #include <gps_ublox/BoardInfo.hpp>
@@ -39,6 +40,7 @@ namespace gps_ublox
             MSG_CLASS_ACK = 0x05,
             MSG_CLASS_CFG = 0x06,
             MSG_CLASS_MON = 0x0A,
+            MSG_CLASS_RXM = 0x02,
             MSG_CLASS_NAV = 0x01
         };
 
@@ -53,7 +55,8 @@ namespace gps_ublox
             MSG_ID_RELPOSNED = 0x3c,
             MSG_ID_RF = 0x38,
             MSG_ID_SIG = 0x43,
-            MSG_ID_SAT = 0x35
+            MSG_ID_SAT = 0x35,
+            MSG_ID_RTCM = 0x32
         };
 
         /** The layer where a configuration data is stored
@@ -139,6 +142,11 @@ namespace gps_ublox
          * Parses a UBX-NAV-RELPOSNED payload
          */
         RelPosNED parseRelPosNED(const std::vector<uint8_t> &payload);
+
+        /**
+         * Parses a UBX-RXM-RTCM payload
+         */
+        RTCMReceivedMessage parseRTCMReceivedMessage(const std::vector<uint8_t> &payload);
 
         /** Implements iodrivers_base's extractPacket protocol
          *

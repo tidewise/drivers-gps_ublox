@@ -697,6 +697,29 @@ TEST_F(DriverTest, poll_calls_back_for_relposned) {
     ASSERT_EQ(16, callbacks.data.reference_station_id);
 }
 
+TEST_F(DriverTest, poll_calls_back_for_rtcmReceivedMessage) {
+    struct Callbacks : Driver::PollCallbacks {
+        RTCMReceivedMessage data;
+
+        void rtcmReceivedMessage(RTCMReceivedMessage const& msg) override {
+            data = msg;
+        }
+    };
+
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_RXM;
+    frame.msg_id = MSG_ID_RTCM;
+    frame.payload.resize(8, 0);
+    frame.payload[6] = 0x10;
+    pushDataToDriver(frame.toPacket());
+
+    Callbacks callbacks;
+    driver.poll(callbacks);
+
+    ASSERT_EQ(16, callbacks.data.message_type);
+}
+
 template<typename T>
 void toLittleEndian(vector<uint8_t> &buffer, T value)
 {

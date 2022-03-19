@@ -364,6 +364,27 @@ BoardInfo UBX::parseVER(const vector<uint8_t> &payload) {
     return info;
 }
 
+RTCMReceivedMessage UBX::parseRTCMReceivedMessage(const std::vector<uint8_t> &payload) {
+    if (payload.size() != 8) {
+        throw std::invalid_argument(
+            "Invalid payload size for UBX-RXM-RTCM, got " + to_string(payload.size()) +
+            ", was expecting 8"
+        );
+    }
+
+    RTCMReceivedMessage msg;
+    msg.time = base::Time::now();
+    msg.flags = payload[1];
+
+    uint16_t msgType = fromLittleEndian<uint16_t>(&payload[6]);
+    if (msgType == 4072) {
+        msgType = msgType * 10 + fromLittleEndian<uint16_t>(&payload[2]);
+    }
+    msg.message_type = msgType;
+    msg.reference_station_id = fromLittleEndian<uint16_t>(&payload[4]);
+    return msg;
+}
+
 namespace gps_ublox {
 namespace UBX {
 
