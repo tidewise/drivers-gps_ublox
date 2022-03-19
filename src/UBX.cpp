@@ -209,7 +209,6 @@ SatelliteInfo UBX::parseSAT(const vector<uint8_t> &payload) {
     SatelliteInfo data;
     data.time_of_week = fromLittleEndian<uint32_t>(&payload[0]);
     data.version = payload[4];
-    data.n_sats = payload[5];
     data.signals.resize(n_sats);
 
     for (size_t i = 0; i < n_sats; i++) {

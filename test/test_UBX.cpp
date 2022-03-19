@@ -291,8 +291,8 @@ TEST_F(UBXTest, it_parses_a_sat_frame) {
     SatelliteInfo data = UBX::parseSAT(payload);
     ASSERT_EQ(3600, data.time_of_week);
     ASSERT_EQ(0, data.version);
-    ASSERT_EQ(2, data.n_sats);
 
+    ASSERT_EQ(2, data.signals.size());
     ASSERT_EQ(25, data.signals[0].gnss_id);
     ASSERT_EQ(21, data.signals[0].satellite_id);
     ASSERT_FLOAT_EQ(43, data.signals[0].elevation.getDeg());

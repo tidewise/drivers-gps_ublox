@@ -12,7 +12,6 @@ namespace gps_ublox {
     struct SatelliteInfo {
         uint32_t time_of_week;  // in ms
         uint8_t version;
-        uint8_t n_sats;
 
         /**
          * The actual satellite info
