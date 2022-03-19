@@ -302,3 +302,144 @@ TEST_F(UBXTest, it_parses_a_sat_frame) {
     ASSERT_EQ(112, data.signals[0].signal_flags);
     ASSERT_EQ(15, data.signals[1].gnss_id);
 }
+
+TEST_F(UBXTest, it_rejects_a_relposned_payload_that_is_too_small) {
+    vector<uint8_t> payload;
+    payload.resize(63);
+    ASSERT_THROW(UBX::parseRelPosNED(payload), std::invalid_argument);
+}
+
+TEST_F(UBXTest, it_rejects_a_relposned_payload_that_is_too_big) {
+    vector<uint8_t> payload;
+    payload.resize(65);
+    ASSERT_THROW(UBX::parseRelPosNED(payload), std::invalid_argument);
+}
+
+TEST_F(UBXTest, it_parses_a_relposned_frame) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 1); // version
+    toLittleEndian<uint8_t>(payload, 0); // reserved0
+    toLittleEndian<uint16_t>(payload, 152); // reference station ID
+    toLittleEndian<uint32_t>(payload, 3600); // time of week
+    toLittleEndian<int32_t>(payload, -52); // N (cm)
+    toLittleEndian<int32_t>(payload, 123); // E (cm)
+    toLittleEndian<int32_t>(payload, 28); // D (cm)
+    toLittleEndian<int32_t>(payload, 32); // Length (cm)
+    toLittleEndian<int32_t>(payload, 20010403ul); // Heading (1e-5 deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved1
+    toLittleEndian<int8_t>(payload, -90); // N (0.1mm)
+    toLittleEndian<int8_t>(payload, 25); // E (0.1mm)
+    toLittleEndian<int8_t>(payload, -44); // D (0.1mm)
+    toLittleEndian<int8_t>(payload, -42); // Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 212); // Accuracy N (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4221); // Accuracy E (0.1mm)
+    toLittleEndian<uint32_t>(payload, 8353); // Accuracy D (0.1mm)
+    toLittleEndian<uint32_t>(payload, 244); // Accuracy Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4030201ul); // Accuracy Heading (1e-5deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved2
+    toLittleEndian<uint32_t>(payload, 1 | 2 | 4 | 256 | 512); // flags
+
+    auto data = UBX::parseRelPosNED(payload);
+
+    ASSERT_EQ(3600, data.time_of_week);
+    ASSERT_EQ(152, data.reference_station_id);
+    ASSERT_FLOAT_EQ(-0.52 - 0.0090, data.relative_position_NED.x());
+    ASSERT_FLOAT_EQ(1.23 + 0.0025, data.relative_position_NED.y());
+    ASSERT_FLOAT_EQ(0.28 - 0.0044, data.relative_position_NED.z());
+    ASSERT_FLOAT_EQ(0.32 - 0.0042, data.relative_position_length);
+    ASSERT_FLOAT_EQ(200.10403 - 360, data.relative_position_heading.getDeg());
+
+    ASSERT_FLOAT_EQ(0.0212, data.accuracy_NED.x());
+    ASSERT_FLOAT_EQ(0.4221, data.accuracy_NED.y());
+    ASSERT_FLOAT_EQ(0.8353, data.accuracy_NED.z());
+    ASSERT_FLOAT_EQ(0.0244, data.accuracy_length);
+    ASSERT_FLOAT_EQ(40.30201, data.accuracy_heading.getDeg());
+
+    ASSERT_EQ(1 | 2 | 4 | 256 | 512, data.flags);
+}
+
+TEST_F(UBXTest, it_does_not_fill_the_relative_position_fields_if_it_is_invalid) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 1); // version
+    toLittleEndian<uint8_t>(payload, 0); // reserved0
+    toLittleEndian<uint16_t>(payload, 152); // reference station ID
+    toLittleEndian<uint32_t>(payload, 3600); // time of week
+    toLittleEndian<int32_t>(payload, -52); // N (cm)
+    toLittleEndian<int32_t>(payload, 123); // E (cm)
+    toLittleEndian<int32_t>(payload, 28); // D (cm)
+    toLittleEndian<int32_t>(payload, 32); // Length (cm)
+    toLittleEndian<int32_t>(payload, 20010403ul); // Heading (1e-5 deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved1
+    toLittleEndian<int8_t>(payload, -90); // N (0.1mm)
+    toLittleEndian<int8_t>(payload, 25); // E (0.1mm)
+    toLittleEndian<int8_t>(payload, -44); // D (0.1mm)
+    toLittleEndian<int8_t>(payload, -42); // Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 212); // Accuracy N (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4221); // Accuracy E (0.1mm)
+    toLittleEndian<uint32_t>(payload, 8353); // Accuracy D (0.1mm)
+    toLittleEndian<uint32_t>(payload, 244); // Accuracy Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4030201ul); // Accuracy Heading (1e-5deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved2
+    toLittleEndian<uint32_t>(payload, 1 | 2 | 256 | 512); // flags, 4 == relative position valid, 256 = relative position heading valid
+
+    auto data = UBX::parseRelPosNED(payload);
+
+    ASSERT_EQ(3600, data.time_of_week);
+    ASSERT_EQ(152, data.reference_station_id);
+    ASSERT_TRUE(base::isUnknown(data.relative_position_NED.x()));
+    ASSERT_TRUE(base::isUnknown(data.relative_position_NED.y()));
+    ASSERT_TRUE(base::isUnknown(data.relative_position_NED.z()));
+    ASSERT_FLOAT_EQ(0.32 - 0.0042, data.relative_position_length);
+    ASSERT_FLOAT_EQ(200.10403 - 360, data.relative_position_heading.getDeg());
+
+    ASSERT_TRUE(base::isUnknown(data.accuracy_NED.x()));
+    ASSERT_TRUE(base::isUnknown(data.accuracy_NED.y()));
+    ASSERT_TRUE(base::isUnknown(data.accuracy_NED.z()));
+    ASSERT_FLOAT_EQ(0.0244, data.accuracy_length);
+    ASSERT_FLOAT_EQ(40.30201, data.accuracy_heading.getDeg());
+
+    ASSERT_EQ(1 | 2 | 256 | 512, data.flags);
+}
+
+TEST_F(UBXTest, it_does_not_fill_the_relative_position_length_and_angle_if_they_are_invalid) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 1); // version
+    toLittleEndian<uint8_t>(payload, 0); // reserved0
+    toLittleEndian<uint16_t>(payload, 152); // reference station ID
+    toLittleEndian<uint32_t>(payload, 3600); // time of week
+    toLittleEndian<int32_t>(payload, -52); // N (cm)
+    toLittleEndian<int32_t>(payload, 123); // E (cm)
+    toLittleEndian<int32_t>(payload, 28); // D (cm)
+    toLittleEndian<int32_t>(payload, 32); // Length (cm)
+    toLittleEndian<int32_t>(payload, 20010403ul); // Heading (1e-5 deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved1
+    toLittleEndian<int8_t>(payload, -90); // N (0.1mm)
+    toLittleEndian<int8_t>(payload, 25); // E (0.1mm)
+    toLittleEndian<int8_t>(payload, -44); // D (0.1mm)
+    toLittleEndian<int8_t>(payload, -42); // Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 212); // Accuracy N (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4221); // Accuracy E (0.1mm)
+    toLittleEndian<uint32_t>(payload, 8353); // Accuracy D (0.1mm)
+    toLittleEndian<uint32_t>(payload, 244); // Accuracy Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4030201ul); // Accuracy Heading (1e-5deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved2
+    toLittleEndian<uint32_t>(payload, 1 | 2 | 4 | 512); // flags
+
+    auto data = UBX::parseRelPosNED(payload);
+
+    ASSERT_EQ(3600, data.time_of_week);
+    ASSERT_EQ(152, data.reference_station_id);
+    ASSERT_FLOAT_EQ(-0.52 - 0.0090, data.relative_position_NED.x());
+    ASSERT_FLOAT_EQ(1.23 + 0.0025, data.relative_position_NED.y());
+    ASSERT_FLOAT_EQ(0.28 - 0.0044, data.relative_position_NED.z());
+    ASSERT_TRUE(base::isUnknown(data.relative_position_length));
+    ASSERT_TRUE(base::isUnknown(data.relative_position_heading.getDeg()));
+
+    ASSERT_FLOAT_EQ(0.0212, data.accuracy_NED.x());
+    ASSERT_FLOAT_EQ(0.4221, data.accuracy_NED.y());
+    ASSERT_FLOAT_EQ(0.8353, data.accuracy_NED.z());
+    ASSERT_TRUE(base::isUnknown(data.accuracy_length));
+    ASSERT_TRUE(base::isUnknown(data.accuracy_heading.getDeg()));
+
+    ASSERT_EQ(1 | 2 | 4 | 512, data.flags);
+}

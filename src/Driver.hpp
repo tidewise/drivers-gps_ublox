@@ -4,6 +4,7 @@
 #include <gps_ublox/BoardInfo.hpp>
 #include <gps_ublox/cfg.hpp>
 #include <gps_ublox/PVT.hpp>
+#include <gps_ublox/RelPosNED.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
@@ -26,6 +27,7 @@ namespace gps_ublox
 
                 virtual void rtcm(uint8_t const* buffer, size_t size) {};
                 virtual void pvt(PVT const& pvt) {};
+                virtual void relposned(RelPosNED const& relposned) {};
                 virtual void satelliteInfo(SatelliteInfo const& info) {};
                 virtual void signalInfo(SignalInfo const& info) {};
                 virtual void rfInfo(RFInfo const& info) {};
@@ -210,8 +212,11 @@ namespace gps_ublox
              */
             PVT readPVT();
 
-            /** Wait for PVT frame */
+            /** Wait for a PVT message */
             PVT waitForPVT();
+
+            /** Wait for a RelPosNED message */
+            RelPosNED waitForRelPosNED();
 
             /** Requests RF info
              */

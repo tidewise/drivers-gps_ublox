@@ -447,6 +447,18 @@ TEST_F(DriverTest, it_waits_for_a_pvt_message) {
     ASSERT_EQ(3600, pvt.time_of_week);
 }
 
+TEST_F(DriverTest, it_waits_for_a_relposned_message) {
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_NAV;
+    frame.msg_id = MSG_ID_RELPOSNED;
+    toLittleEndian<uint32_t>(frame.payload, 0x00100000); // set reference station to 16
+    frame.payload.resize(64, 0);
+    pushDataToDriver(frame.toPacket());
+    auto relposned = driver.waitForRelPosNED();
+    ASSERT_EQ(16, relposned.reference_station_id);
+}
+
 TEST_F(DriverTest, it_requests_rf_info) {
     IODRIVERS_BASE_MOCK();
     Frame frame;
@@ -660,6 +672,29 @@ TEST_F(DriverTest, poll_calls_back_for_rf_info_data) {
 
     ASSERT_EQ(2, callbacks.data.blocks.size());
     ASSERT_EQ(25, callbacks.data.blocks[0].block_id);
+}
+
+TEST_F(DriverTest, poll_calls_back_for_relposned) {
+    struct Callbacks : Driver::PollCallbacks {
+        RelPosNED data;
+
+        void relposned(RelPosNED const& relposned) {
+            data = relposned;
+        }
+    };
+
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_NAV;
+    frame.msg_id = MSG_ID_RELPOSNED;
+    frame.payload.resize(64);
+    frame.payload[2] = 16;
+    pushDataToDriver(frame.toPacket());
+
+    Callbacks callbacks;
+    driver.poll(callbacks);
+
+    ASSERT_EQ(16, callbacks.data.reference_station_id);
 }
 
 template<typename T>

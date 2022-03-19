@@ -274,6 +274,66 @@ PVT UBX::parsePVT(const vector<uint8_t> &payload) {
     return data;
 }
 
+RelPosNED UBX::parseRelPosNED(const vector<uint8_t> &payload) {
+    if (payload.size() != 64) {
+        std::stringstream ss;
+        ss << "Invalid RelPosNED payload (invalid size = "
+           << payload.size() << ", expected 64)";
+        throw std::invalid_argument(ss.str());
+    }
+
+    RelPosNED data;
+    data.time_of_week = fromLittleEndian<uint32_t>(&payload[4]);
+    data.reference_station_id = fromLittleEndian<uint32_t>(&payload[2]);
+    data.flags = fromLittleEndian<uint32_t>(&payload[60]);
+
+    if (data.flags & RelPosNED::FLAGS_RELATIVE_POSITION_VALID) {
+        int32_t relPosN = fromLittleEndian<int32_t>(&payload[8]);
+        int32_t relPosE = fromLittleEndian<int32_t>(&payload[12]);
+        int32_t relPosD = fromLittleEndian<int32_t>(&payload[16]);
+
+        int8_t relPosHPN = fromLittleEndian<int8_t>(&payload[32]);
+        int8_t relPosHPE = fromLittleEndian<int8_t>(&payload[33]);
+        int8_t relPosHPD = fromLittleEndian<int8_t>(&payload[34]);
+
+        int32_t accN = fromLittleEndian<int32_t>(&payload[36]);
+        int32_t accE = fromLittleEndian<int32_t>(&payload[40]);
+        int32_t accD = fromLittleEndian<int32_t>(&payload[44]);
+
+        data.relative_position_NED = base::Vector3d(
+            static_cast<double>(relPosN) * 1e-2 + static_cast<double>(relPosHPN) * 1e-4,
+            static_cast<double>(relPosE) * 1e-2 + static_cast<double>(relPosHPE) * 1e-4,
+            static_cast<double>(relPosD) * 1e-2 + static_cast<double>(relPosHPD) * 1e-4
+        );
+
+        data.accuracy_NED = base::Vector3d(
+            static_cast<double>(accN) * 1e-4,
+            static_cast<double>(accE) * 1e-4,
+            static_cast<double>(accD) * 1e-4
+        );
+    }
+
+    if (data.flags & RelPosNED::FLAGS_HEADING_VALID) {
+        int32_t relPosLength = fromLittleEndian<int32_t>(&payload[20]);
+        int32_t relPosAngle = fromLittleEndian<int32_t>(&payload[24]);
+
+        int8_t relPosHPLength = fromLittleEndian<int8_t>(&payload[35]);
+
+        int32_t accLength = fromLittleEndian<int32_t>(&payload[48]);
+        int32_t accHeading = fromLittleEndian<int32_t>(&payload[52]);
+
+        data.relative_position_length =
+            static_cast<double>(relPosLength) * 1e-2 +
+            static_cast<double>(relPosHPLength) * 1e-4;
+        data.relative_position_heading =
+            base::Angle::fromDeg(static_cast<double>(relPosAngle) * 1e-5);
+        data.accuracy_length = static_cast<double>(accLength) * 1e-4;
+        data.accuracy_heading = base::Angle::fromDeg(static_cast<double>(accHeading) * 1e-5);
+    }
+
+    return data;
+}
+
 BoardInfo UBX::parseVER(const vector<uint8_t> &payload) {
     BoardInfo info;
     info.software_version = string(reinterpret_cast<const char*>(&payload[0]));

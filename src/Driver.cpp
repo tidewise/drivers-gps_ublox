@@ -45,6 +45,11 @@ PVT Driver::waitForPVT() {
     return UBX::parsePVT(frame.payload);
 }
 
+RelPosNED Driver::waitForRelPosNED() {
+    Frame frame = waitForFrame(MSG_CLASS_NAV, MSG_ID_RELPOSNED);
+    return UBX::parseRelPosNED(frame.payload);
+}
+
 RFInfo Driver::readRFInfo() {
     Frame frame = pollFrame(MSG_CLASS_MON, MSG_ID_RF);
     return UBX::parseRF(frame.payload);
@@ -99,6 +104,9 @@ void Driver::pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout) {
     Frame frame = Frame::fromPacket(mReadBuffer, bytes);
     if (frame.msg_class == MSG_CLASS_NAV && frame.msg_id == MSG_ID_PVT) {
         callbacks.pvt(UBX::parsePVT(frame.payload));
+    }
+    else if (frame.msg_class == MSG_CLASS_NAV && frame.msg_id == MSG_ID_RELPOSNED) {
+        callbacks.relposned(UBX::parseRelPosNED(frame.payload));
     }
     else if (frame.msg_class == UBX::MSG_CLASS_NAV && frame.msg_id == UBX::MSG_ID_SAT) {
         callbacks.satelliteInfo(UBX::parseSAT(frame.payload));

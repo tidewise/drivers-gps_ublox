@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <gps_ublox/PVT.hpp>
+#include <gps_ublox/RelPosNED.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
@@ -49,6 +50,7 @@ namespace gps_ublox
             MSG_ID_VALSET = 0x8A,
             MSG_ID_VER = 0x04,
             MSG_ID_PVT = 0x07,
+            MSG_ID_RELPOSNED = 0x3c,
             MSG_ID_RF = 0x38,
             MSG_ID_SIG = 0x43,
             MSG_ID_SAT = 0x35
@@ -132,6 +134,11 @@ namespace gps_ublox
          * Parses a UBX-MON-VER payload
          */
         BoardInfo parseVER(const std::vector<uint8_t> &payload);
+
+        /**
+         * Parses a UBX-NAV-RELPOSNED payload
+         */
+        RelPosNED parseRelPosNED(const std::vector<uint8_t> &payload);
 
         /** Implements iodrivers_base's extractPacket protocol
          *
