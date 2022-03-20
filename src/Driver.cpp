@@ -256,7 +256,7 @@ void Driver::setPortProtocol(DevicePort port, DataDirection direction,
     setConfigKeyValue(key_id, state, persist);
 }
 
-void Driver::setTimeSystem(TimeSystem system, bool persist)
+void Driver::setMeasurementRefTime(MeasurementRefTime system, bool persist)
 {
     setConfigKeyValue(cfg::RATE_TIMEREF, static_cast<uint8_t>(system), persist);
 }

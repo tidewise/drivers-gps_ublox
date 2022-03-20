@@ -22,6 +22,31 @@ namespace gps_ublox {
         PROTOCOL_RTCM3X = 4
     };
 
+    /** Time systems used to align measurements
+     */
+    enum MeasurementRefTime {
+        MEASUREMENT_REF_TIME_UTC = 0,
+        MEASUREMENT_REF_TIME_GPS = 1,
+        MEASUREMENT_REF_TIME_GLONASS = 2,
+        MEASUREMENT_REF_TIME_BEIDOU = 3,
+        MEASUREMENT_REF_TIME_GALILEO = 4
+    };
+
+    enum DynamicModel {
+        DYNAMIC_MODEL_PORTABLE = 0,
+        DYNAMIC_MODEL_STATIONARY = 2,
+        DYNAMIC_MODEL_PEDESTRIAN = 3,
+        DYNAMIC_MODEL_AUTOMOTIVE = 4,
+        DYNAMIC_MODEL_SEA = 5,
+        DYNAMIC_MODEL_AIR_BELOW_1G = 6, // Airborne with <1g acceleration
+        DYNAMIC_MODEL_AIR_BELOW_2G = 7, // Airborne with <2g acceleration
+        DYNAMIC_MODEL_AIR_BELOW_4G = 8, // Airborne with <4g acceleration
+        DYNAMIC_MODEL_WRIST = 9, // Wrist worn watch
+        DYNAMIC_MODEL_BIKE = 10, // Bike (not available on all models)
+        DYNAMIC_MODEL_LAWN_MOWER = 11, // Lawn mower (not available on all models)
+        DYNAMIC_MODEL_ESCOOTER = 12, // E-Scooter (not available on all models)
+    };
+
     /** Odometer profile enumeration
      */
     enum OdometerProfile {

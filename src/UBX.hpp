@@ -68,28 +68,6 @@ namespace gps_ublox
             LAYER_ALL = 7
         };
 
-        /** Time systems used to align measurements
-         */
-        enum TimeSystem {
-            UTC = 0,
-            GPS = 1,
-            GLONASS = 2,
-            BEIDOU = 3,
-            GALILEO = 4
-        };
-
-        enum DynamicModel {
-            PORT = 0,
-            STATATIONARY = 2,
-            PEDESTRIAN = 3,
-            AUTOMOTIVE = 4,
-            SEA = 5,
-            AIR_1 = 6, // Airborne with <1g acceleration
-            AIR_2 = 7, // Airborne with <2g acceleration
-            AIR_4 = 8, // Airborne with <4g acceleration
-            WRIST = 9 // Wrist worn watch
-        };
-
         /** Represents an UBX binary data frame
          *
          * the over-the-wire format is:

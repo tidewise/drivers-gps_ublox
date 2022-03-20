@@ -375,7 +375,7 @@ TEST_F(DriverTest, it_sets_the_time_system_used_to_aligh_measurements) {
     vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(cfg::RATE_TIMEREF, 2, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
-    driver.setTimeSystem(UBX::GLONASS, true);
+    driver.setMeasurementRefTime(MEASUREMENT_REF_TIME_GLONASS, true);
 }
 
 TEST_F(DriverTest, it_sets_the_dynamic_platform_model) {
@@ -390,7 +390,7 @@ TEST_F(DriverTest, it_sets_the_dynamic_platform_model) {
     vector<uint8_t> packet = getConfigValueSetPacket<uint8_t>(cfg::NAVSPG_DYNMODEL, 4, true);
     vector<uint8_t> reply = frame.toPacket();
     EXPECT_REPLY(packet, reply);
-    driver.setDynamicModel(UBX::AUTOMOTIVE, true);
+    driver.setDynamicModel(DYNAMIC_MODEL_AUTOMOTIVE, true);
 }
 
 TEST_F(DriverTest, it_sets_the_speed_threshold) {

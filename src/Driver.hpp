@@ -151,14 +151,14 @@ namespace gps_ublox
              * @param system Time system
              * @param persist Whether the configuration should be persisted
              */
-            void setTimeSystem(UBX::TimeSystem system, bool persist = true);
+            void setMeasurementRefTime(MeasurementRefTime system, bool persist = true);
 
             /** Sets the dynamic platform model
              *
              * @param model Dynamic platform model
              * @param persist Whether the configuration should be persisted
              */
-            void setDynamicModel(UBX::DynamicModel model, bool persist = true);
+            void setDynamicModel(DynamicModel model, bool persist = true);
 
             /** Sets GNSS speed threshold below which platform is considered as
              * stationary (a.k.a. static hold threshold)
