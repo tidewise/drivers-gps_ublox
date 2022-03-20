@@ -235,6 +235,16 @@ namespace gps_ublox
              */
             UBX::Frame readFrame();
 
+            /** Read all available frames and dispatch them synchronously
+             * to the given callbacks
+             *
+             * The Driver::PollCallbacks structure defines all possible callbacks
+             * as no-ops. Just subclass and define the methods you are interested
+             * in. To avoid unnecessary processing, it is also best to disable the
+             * message(s) you are not interested in using \c setOutputRate or
+             * \c setRTCMOutputRate and/or disabling whole protocols using
+             * \c setPortProtocol
+             */
             void poll(PollCallbacks& callbacks);
     };
 
