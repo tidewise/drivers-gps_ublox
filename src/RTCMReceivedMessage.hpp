@@ -1,6 +1,10 @@
 #ifndef GPS_UBLOX_RTCMRECEIVEDMESSAGE_HPP
 #define GPS_UBLOX_RTCMRECEIVEDMESSAGE_HPP
 
+#include <cstdint>
+
+#include <base/Time.hpp>
+
 namespace gps_ublox {
     /** Representation of UBX' MXM-RTCM message which gives information about
      * received RTCM messages
