@@ -7,8 +7,10 @@
 #include <array>
 #include <vector>
 
-#include <gps_ublox/GPSData.hpp>
+#include <gps_ublox/PVT.hpp>
+#include <gps_ublox/RelPosNED.hpp>
 #include <gps_ublox/RFInfo.hpp>
+#include <gps_ublox/RTCMReceivedMessage.hpp>
 #include <gps_ublox/SignalInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
 #include <gps_ublox/BoardInfo.hpp>
@@ -38,6 +40,7 @@ namespace gps_ublox
             MSG_CLASS_ACK = 0x05,
             MSG_CLASS_CFG = 0x06,
             MSG_CLASS_MON = 0x0A,
+            MSG_CLASS_RXM = 0x02,
             MSG_CLASS_NAV = 0x01
         };
 
@@ -49,9 +52,11 @@ namespace gps_ublox
             MSG_ID_VALSET = 0x8A,
             MSG_ID_VER = 0x04,
             MSG_ID_PVT = 0x07,
+            MSG_ID_RELPOSNED = 0x3c,
             MSG_ID_RF = 0x38,
             MSG_ID_SIG = 0x43,
-            MSG_ID_SAT = 0x35
+            MSG_ID_SAT = 0x35,
+            MSG_ID_RTCM = 0x32
         };
 
         /** The layer where a configuration data is stored
@@ -61,53 +66,6 @@ namespace gps_ublox
             LAYER_BBR = 2,
             LAYER_FLASH = 4,
             LAYER_ALL = 7
-        };
-
-        /** Time systems used to align measurements
-         */
-        enum TimeSystem {
-            UTC = 0,
-            GPS = 1,
-            GLONASS = 2,
-            BEIDOU = 3,
-            GALILEO = 4
-        };
-
-        enum DynamicModel {
-            PORT = 0,
-            STATATIONARY = 2,
-            PEDESTRIAN = 3,
-            AUTOMOTIVE = 4,
-            SEA = 5,
-            AIR_1 = 6, // Airborne with <1g acceleration
-            AIR_2 = 7, // Airborne with <2g acceleration
-            AIR_4 = 8, // Airborne with <4g acceleration
-            WRIST = 9 // Wrist worn watch
-        };
-
-        /** The unique key id of a configuration value
-         */
-        enum ConfigKeyId {
-            I2C_ENABLED = 0x10510003,
-            SPI_ENABLED = 0x10640006,
-            UART1_ENABLED = 0x10520005,
-            UART2_ENABLED = 0x10530005,
-            USB_ENABLED = 0x10650001,
-            ODO_USE_ODO = 0x10220001,
-            ODO_USE_COG = 0x10220002,
-            ODO_OUTLPVEL = 0x10220003,
-            ODO_OUTLPCOG = 0x10220004,
-            ODO_PROFILE = 0x20220005,
-            ODO_COGMAXSPEED = 0x20220021,
-            ODO_COGMAXPOSACC = 0x20220022,
-            ODO_VELLPGAIN = 0x20220031,
-            ODO_COGLPGAIN = 0x20220032,
-            RATE_MEAS = 0x30210001,
-            RATE_NAV = 0x30210002,
-            RATE_TIMEREF = 0x20210003,
-            NAVSPG_DYNMODEL = 0x20110021,
-            MOT_GNSSSPEED_THRS = 0x20250038,
-            MOT_GNSSDIST_THRS = 0x3025003b
         };
 
         /** Represents an UBX binary data frame
@@ -136,7 +94,7 @@ namespace gps_ublox
         /**
          * Parses an UBX-NAV-PVT payload
          */
-        GPSData parsePVT(const std::vector<uint8_t> &payload);
+        PVT parsePVT(const std::vector<uint8_t> &payload);
 
         /**
          * Parses an UBX-MON-RF payload
@@ -157,6 +115,16 @@ namespace gps_ublox
          * Parses a UBX-MON-VER payload
          */
         BoardInfo parseVER(const std::vector<uint8_t> &payload);
+
+        /**
+         * Parses a UBX-NAV-RELPOSNED payload
+         */
+        RelPosNED parseRelPosNED(const std::vector<uint8_t> &payload);
+
+        /**
+         * Parses a UBX-RXM-RTCM payload
+         */
+        RTCMReceivedMessage parseRTCMReceivedMessage(const std::vector<uint8_t> &payload);
 
         /** Implements iodrivers_base's extractPacket protocol
          *

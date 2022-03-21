@@ -1,14 +1,15 @@
 #ifndef GPS_UBLOX_DRIVER_HPP
 #define GPS_UBLOX_DRIVER_HPP
 
-#include <iodrivers_base/Driver.hpp>
-#include <gps_ublox/UBX.hpp>
 #include <gps_ublox/BoardInfo.hpp>
-#include <gps_ublox/GPSData.hpp>
+#include <gps_ublox/cfg.hpp>
+#include <gps_ublox/PVT.hpp>
+#include <gps_ublox/RelPosNED.hpp>
 #include <gps_ublox/RFInfo.hpp>
-#include <gps_ublox/SignalInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
-#include <stdexcept>
+#include <gps_ublox/SignalInfo.hpp>
+#include <gps_ublox/UBX.hpp>
+#include <iodrivers_base/Driver.hpp>
 
 namespace gps_ublox
 {
@@ -20,6 +21,19 @@ namespace gps_ublox
 
     class Driver : public iodrivers_base::Driver
     {
+        public:
+            struct PollCallbacks {
+                virtual ~PollCallbacks() {}
+
+                virtual void rtcm(uint8_t const* buffer, size_t size) {};
+                virtual void rtcmReceivedMessage(RTCMReceivedMessage const& info) {};
+                virtual void pvt(PVT const& pvt) {};
+                virtual void relposned(RelPosNED const& relposned) {};
+                virtual void satelliteInfo(SatelliteInfo const& info) {};
+                virtual void signalInfo(SignalInfo const& info) {};
+                virtual void rfInfo(RFInfo const& info) {};
+            };
+
         private:
             static const size_t BUFFER_SIZE = 256 * 15;
             uint8_t mWriteBuffer[BUFFER_SIZE];
@@ -31,6 +45,7 @@ namespace gps_ublox
                                      const uint8_t *msg_id = nullptr,
                                      const std::vector<uint8_t> *payload = nullptr);
             bool waitForAck(uint8_t class_id, uint8_t msg_id);
+            void pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout);
 
         protected:
             /** Implements iodrivers_base's extractPacket protocol
@@ -42,51 +57,6 @@ namespace gps_ublox
         public:
             template<typename T>
             void setConfigKeyValue(uint32_t key_id, T state, bool persist = false);
-
-            /** Identifies the device's ports
-             */
-            enum DevicePort {
-                PORT_I2C = 0x10710000,
-                PORT_SPI = 0x10790000,
-                PORT_UART1 = 0x10730000,
-                PORT_UART2 = 0x10750000,
-                PORT_USB = 0x10770000
-            };
-
-            /** The protocols supported by the device
-             */
-            enum DeviceProtocol {
-                PROTOCOL_UBX = 1,
-                PROTOCOL_NMEA = 2,
-                PROTOCOL_RTCM3X = 4
-            };
-
-            /** Odometer profile enumeration
-             */
-            enum OdometerProfile {
-                ODOM_RUNNING = 0,
-                ODOM_CYCLING,
-                ODOM_SWIMMING,
-                ODOM_CAR,
-                ODOM_CUSTOM
-            };
-
-            /** Data direction
-             */
-            enum DataDirection {
-                DIRECTION_INPUT = 0,
-                DIRECTION_OUTPUT = 0x00010000,
-            };
-
-            /** Message types
-             */
-            enum MessageOutputType {
-                MSGOUT_NAV_PVT = 0x20910006,
-                MSGOUT_NAV_SAT = 0x20910015,
-                MSGOUT_NAV_SIG = 0x20910345,
-                MSGOUT_MON_RF = 0x20910359
-            };
-
 
             Driver();
 
@@ -181,14 +151,14 @@ namespace gps_ublox
              * @param system Time system
              * @param persist Whether the configuration should be persisted
              */
-            void setTimeSystem(UBX::TimeSystem system, bool persist = true);
+            void setMeasurementRefTime(MeasurementRefTime system, bool persist = true);
 
             /** Sets the dynamic platform model
              *
              * @param model Dynamic platform model
              * @param persist Whether the configuration should be persisted
              */
-            void setDynamicModel(UBX::DynamicModel model, bool persist = true);
+            void setDynamicModel(DynamicModel model, bool persist = true);
 
             /** Sets GNSS speed threshold below which platform is considered as
              * stationary (a.k.a. static hold threshold)
@@ -215,6 +185,15 @@ namespace gps_ublox
              */
             void setOutputRate(DevicePort port, MessageOutputType msg, uint8_t rate, bool persist = true);
 
+            /** Sets the output rate of a RTCM message on a given port
+             *
+             * @param port Port to be toggled
+             * @param rtcm_message ID of the RTCM message
+             * @param period Message period as multiples of the measurement period. Set to zero to disable.
+             * @param persist Whether the configuration should be persisted
+             */
+            void setRTCMOutputRate(DevicePort port, uint16_t msg, uint8_t rate = 1, bool persist = true);
+
             /** Requests device version information
              */
             BoardInfo readBoardInfo();
@@ -232,7 +211,13 @@ namespace gps_ublox
 
             /** Requests GPS data
              */
-            GPSData readGPSData();
+            PVT readPVT();
+
+            /** Wait for a PVT message */
+            PVT waitForPVT();
+
+            /** Wait for a RelPosNED message */
+            RelPosNED waitForRelPosNED();
 
             /** Requests RF info
              */
@@ -249,6 +234,18 @@ namespace gps_ublox
             /** Reads any frame
              */
             UBX::Frame readFrame();
+
+            /** Read all available frames and dispatch them synchronously
+             * to the given callbacks
+             *
+             * The Driver::PollCallbacks structure defines all possible callbacks
+             * as no-ops. Just subclass and define the methods you are interested
+             * in. To avoid unnecessary processing, it is also best to disable the
+             * message(s) you are not interested in using \c setOutputRate or
+             * \c setRTCMOutputRate and/or disabling whole protocols using
+             * \c setPortProtocol
+             */
+            void poll(PollCallbacks& callbacks);
     };
 
 } // end namespace gps_ublox

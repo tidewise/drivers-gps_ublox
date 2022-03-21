@@ -8,10 +8,9 @@
 
 namespace gps_ublox {
     /**
-     * GPS data
+     * Ublox' PVT message
      */
-    struct GPSData {
-
+    struct PVT {
         enum GNSSFixType {
             NO_FIX = 0,
             DEAD_RECKONING = 1,
@@ -21,6 +20,13 @@ namespace gps_ublox {
             TIME_ONLY = 5
         };
 
+        enum GNSSFixFlags {
+            FIX_OK = 1,
+            FIX_DIFFERENTIAL = 2,
+            FIX_RTK_FLOAT = 64,
+            FIX_RTK_FIXED = 128
+        };
+
         uint32_t time_of_week;  // in milliseconds
         uint8_t valid;
         base::Time time;
@@ -28,6 +34,7 @@ namespace gps_ublox {
         GNSSFixType fix_type;
         uint8_t fix_flags;
         uint8_t additional_flags;
+        base::Time age_of_differential_corrections;
         uint8_t num_sats;
         base::Angle longitude;  // in rad
         base::Angle latitude;  // in rad

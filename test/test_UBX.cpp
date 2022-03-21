@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#include <gps_ublox/cfg.hpp>
 #include <gps_ublox/UBX.hpp>
 
 using namespace std;
@@ -86,7 +87,7 @@ TEST_F(UBXTest, it_serializes_a_frame) {
 }
 
 TEST_F(UBXTest, it_returns_a_valset_all_layers_packet) {
-    vector<uint8_t> packet = getConfigValueSetPacket(UBX::I2C_ENABLED, true);
+    vector<uint8_t> packet = getConfigValueSetPacket(cfg::I2C_ENABLED, true);
     buffer = { UBX::SYNC_1, UBX::SYNC_2, UBX::MSG_CLASS_CFG, UBX::MSG_ID_VALSET, 0x09, 0x00,
                0x00, UBX::LAYER_ALL, 0x00, 0x00, 0x03, 0x00, 0x51, 0x10, 0x01 };
 
@@ -95,7 +96,7 @@ TEST_F(UBXTest, it_returns_a_valset_all_layers_packet) {
 }
 
 TEST_F(UBXTest, it_returns_a_valset_ram_layer_packet) {
-    vector<uint8_t> packet = getConfigValueSetPacket(UBX::I2C_ENABLED, false, false);
+    vector<uint8_t> packet = getConfigValueSetPacket(cfg::I2C_ENABLED, false, false);
     buffer = { UBX::SYNC_1, UBX::SYNC_2, UBX::MSG_CLASS_CFG, UBX::MSG_ID_VALSET, 0x09, 0x00,
                0x00, UBX::LAYER_RAM, 0x00, 0x00, 0x03, 0x00, 0x51, 0x10, 0x00 };
 
@@ -144,8 +145,7 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
     toLittleEndian<uint32_t>(payload, 233);  // speed accuracy
     toLittleEndian<uint32_t>(payload, 83200);  // heading accuracy
     toLittleEndian<uint16_t>(payload, 421);  // position dop
-    toLittleEndian<uint8_t>(payload, 7);  // additional flags
-    toLittleEndian<uint8_t>(payload, 0);
+    toLittleEndian<uint16_t>(payload, 4 << 1);  // flags3
     toLittleEndian<uint8_t>(payload, 0);
     toLittleEndian<uint8_t>(payload, 0);
     toLittleEndian<uint8_t>(payload, 0);
@@ -154,13 +154,13 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
     toLittleEndian<int16_t>(payload, 751);  // magnetic declination
     toLittleEndian<uint16_t>(payload, 531);  // magnetic declination accuracy
 
-    GPSData data = UBX::parsePVT(payload);
+    PVT data = UBX::parsePVT(payload);
     ASSERT_EQ(3600, data.time_of_week);
     // Timestamp converted using https://www.epochconverter.com/
     ASSERT_EQ(1566342932999999ull, data.time.toMicroseconds());
     ASSERT_EQ(1, data.valid);
     ASSERT_EQ(2860, data.time_accuracy);
-    ASSERT_FLOAT_EQ(GPSData::GNSS_PLUS_DEAD_RECKONING, data.fix_type);
+    ASSERT_EQ(PVT::GNSS_PLUS_DEAD_RECKONING, data.fix_type);
     ASSERT_EQ(2, data.fix_flags);
     ASSERT_EQ(3, data.additional_flags);
     ASSERT_EQ(24, data.num_sats);
@@ -178,7 +178,8 @@ TEST_F(UBXTest, it_parses_a_pvt_frame) {
     ASSERT_FLOAT_EQ(0.233, data.speed_accuracy);
     ASSERT_FLOAT_EQ(0.832, data.heading_accuracy.getDeg());
     ASSERT_FLOAT_EQ(4.21, data.position_dop);
-    ASSERT_FLOAT_EQ(7, data.more_flags);
+    ASSERT_EQ(4 << 1, data.more_flags);
+    ASSERT_EQ(base::Time::fromSeconds(5), data.age_of_differential_corrections);
     ASSERT_FLOAT_EQ(0.93, data.heading_of_vehicle.getDeg());
     ASSERT_FLOAT_EQ(7.51, data.magnetic_declination.getDeg());
     ASSERT_FLOAT_EQ(5.31, data.magnetic_declination_accuracy.getDeg());
@@ -290,8 +291,8 @@ TEST_F(UBXTest, it_parses_a_sat_frame) {
     SatelliteInfo data = UBX::parseSAT(payload);
     ASSERT_EQ(3600, data.time_of_week);
     ASSERT_EQ(0, data.version);
-    ASSERT_EQ(2, data.n_sats);
 
+    ASSERT_EQ(2, data.signals.size());
     ASSERT_EQ(25, data.signals[0].gnss_id);
     ASSERT_EQ(21, data.signals[0].satellite_id);
     ASSERT_FLOAT_EQ(43, data.signals[0].elevation.getDeg());
@@ -300,4 +301,187 @@ TEST_F(UBXTest, it_parses_a_sat_frame) {
     ASSERT_EQ(53, data.signals[0].signal_strength);
     ASSERT_EQ(112, data.signals[0].signal_flags);
     ASSERT_EQ(15, data.signals[1].gnss_id);
+}
+
+TEST_F(UBXTest, it_rejects_a_relposned_payload_that_is_too_small) {
+    vector<uint8_t> payload;
+    payload.resize(63);
+    ASSERT_THROW(UBX::parseRelPosNED(payload), std::invalid_argument);
+}
+
+TEST_F(UBXTest, it_rejects_a_relposned_payload_that_is_too_big) {
+    vector<uint8_t> payload;
+    payload.resize(65);
+    ASSERT_THROW(UBX::parseRelPosNED(payload), std::invalid_argument);
+}
+
+TEST_F(UBXTest, it_parses_a_relposned_frame) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 1); // version
+    toLittleEndian<uint8_t>(payload, 0); // reserved0
+    toLittleEndian<uint16_t>(payload, 152); // reference station ID
+    toLittleEndian<uint32_t>(payload, 3600); // time of week
+    toLittleEndian<int32_t>(payload, -52); // N (cm)
+    toLittleEndian<int32_t>(payload, 123); // E (cm)
+    toLittleEndian<int32_t>(payload, 28); // D (cm)
+    toLittleEndian<int32_t>(payload, 32); // Length (cm)
+    toLittleEndian<int32_t>(payload, 20010403ul); // Heading (1e-5 deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved1
+    toLittleEndian<int8_t>(payload, -90); // N (0.1mm)
+    toLittleEndian<int8_t>(payload, 25); // E (0.1mm)
+    toLittleEndian<int8_t>(payload, -44); // D (0.1mm)
+    toLittleEndian<int8_t>(payload, -42); // Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 212); // Accuracy N (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4221); // Accuracy E (0.1mm)
+    toLittleEndian<uint32_t>(payload, 8353); // Accuracy D (0.1mm)
+    toLittleEndian<uint32_t>(payload, 244); // Accuracy Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4030201ul); // Accuracy Heading (1e-5deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved2
+    toLittleEndian<uint32_t>(payload, 1 | 2 | 4 | 256 | 512); // flags
+
+    auto data = UBX::parseRelPosNED(payload);
+
+    ASSERT_EQ(3600, data.time_of_week);
+    ASSERT_EQ(152, data.reference_station_id);
+    ASSERT_FLOAT_EQ(-0.52 - 0.0090, data.relative_position_NED.x());
+    ASSERT_FLOAT_EQ(1.23 + 0.0025, data.relative_position_NED.y());
+    ASSERT_FLOAT_EQ(0.28 - 0.0044, data.relative_position_NED.z());
+    ASSERT_FLOAT_EQ(0.32 - 0.0042, data.relative_position_length);
+    ASSERT_FLOAT_EQ(200.10403 - 360, data.relative_position_heading.getDeg());
+
+    ASSERT_FLOAT_EQ(0.0212, data.accuracy_NED.x());
+    ASSERT_FLOAT_EQ(0.4221, data.accuracy_NED.y());
+    ASSERT_FLOAT_EQ(0.8353, data.accuracy_NED.z());
+    ASSERT_FLOAT_EQ(0.0244, data.accuracy_length);
+    ASSERT_FLOAT_EQ(40.30201, data.accuracy_heading.getDeg());
+
+    ASSERT_EQ(1 | 2 | 4 | 256 | 512, data.flags);
+}
+
+TEST_F(UBXTest, it_does_not_fill_the_relative_position_fields_if_it_is_invalid) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 1); // version
+    toLittleEndian<uint8_t>(payload, 0); // reserved0
+    toLittleEndian<uint16_t>(payload, 152); // reference station ID
+    toLittleEndian<uint32_t>(payload, 3600); // time of week
+    toLittleEndian<int32_t>(payload, -52); // N (cm)
+    toLittleEndian<int32_t>(payload, 123); // E (cm)
+    toLittleEndian<int32_t>(payload, 28); // D (cm)
+    toLittleEndian<int32_t>(payload, 32); // Length (cm)
+    toLittleEndian<int32_t>(payload, 20010403ul); // Heading (1e-5 deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved1
+    toLittleEndian<int8_t>(payload, -90); // N (0.1mm)
+    toLittleEndian<int8_t>(payload, 25); // E (0.1mm)
+    toLittleEndian<int8_t>(payload, -44); // D (0.1mm)
+    toLittleEndian<int8_t>(payload, -42); // Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 212); // Accuracy N (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4221); // Accuracy E (0.1mm)
+    toLittleEndian<uint32_t>(payload, 8353); // Accuracy D (0.1mm)
+    toLittleEndian<uint32_t>(payload, 244); // Accuracy Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4030201ul); // Accuracy Heading (1e-5deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved2
+    toLittleEndian<uint32_t>(payload, 1 | 2 | 256 | 512); // flags, 4 == relative position valid, 256 = relative position heading valid
+
+    auto data = UBX::parseRelPosNED(payload);
+
+    ASSERT_EQ(3600, data.time_of_week);
+    ASSERT_EQ(152, data.reference_station_id);
+    ASSERT_TRUE(base::isUnknown(data.relative_position_NED.x()));
+    ASSERT_TRUE(base::isUnknown(data.relative_position_NED.y()));
+    ASSERT_TRUE(base::isUnknown(data.relative_position_NED.z()));
+    ASSERT_FLOAT_EQ(0.32 - 0.0042, data.relative_position_length);
+    ASSERT_FLOAT_EQ(200.10403 - 360, data.relative_position_heading.getDeg());
+
+    ASSERT_TRUE(base::isUnknown(data.accuracy_NED.x()));
+    ASSERT_TRUE(base::isUnknown(data.accuracy_NED.y()));
+    ASSERT_TRUE(base::isUnknown(data.accuracy_NED.z()));
+    ASSERT_FLOAT_EQ(0.0244, data.accuracy_length);
+    ASSERT_FLOAT_EQ(40.30201, data.accuracy_heading.getDeg());
+
+    ASSERT_EQ(1 | 2 | 256 | 512, data.flags);
+}
+
+TEST_F(UBXTest, it_does_not_fill_the_relative_position_length_and_angle_if_they_are_invalid) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 1); // version
+    toLittleEndian<uint8_t>(payload, 0); // reserved0
+    toLittleEndian<uint16_t>(payload, 152); // reference station ID
+    toLittleEndian<uint32_t>(payload, 3600); // time of week
+    toLittleEndian<int32_t>(payload, -52); // N (cm)
+    toLittleEndian<int32_t>(payload, 123); // E (cm)
+    toLittleEndian<int32_t>(payload, 28); // D (cm)
+    toLittleEndian<int32_t>(payload, 32); // Length (cm)
+    toLittleEndian<int32_t>(payload, 20010403ul); // Heading (1e-5 deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved1
+    toLittleEndian<int8_t>(payload, -90); // N (0.1mm)
+    toLittleEndian<int8_t>(payload, 25); // E (0.1mm)
+    toLittleEndian<int8_t>(payload, -44); // D (0.1mm)
+    toLittleEndian<int8_t>(payload, -42); // Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 212); // Accuracy N (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4221); // Accuracy E (0.1mm)
+    toLittleEndian<uint32_t>(payload, 8353); // Accuracy D (0.1mm)
+    toLittleEndian<uint32_t>(payload, 244); // Accuracy Length (0.1mm)
+    toLittleEndian<uint32_t>(payload, 4030201ul); // Accuracy Heading (1e-5deg)
+    toLittleEndian<uint32_t>(payload, 0); // reserved2
+    toLittleEndian<uint32_t>(payload, 1 | 2 | 4 | 512); // flags
+
+    auto data = UBX::parseRelPosNED(payload);
+
+    ASSERT_EQ(3600, data.time_of_week);
+    ASSERT_EQ(152, data.reference_station_id);
+    ASSERT_FLOAT_EQ(-0.52 - 0.0090, data.relative_position_NED.x());
+    ASSERT_FLOAT_EQ(1.23 + 0.0025, data.relative_position_NED.y());
+    ASSERT_FLOAT_EQ(0.28 - 0.0044, data.relative_position_NED.z());
+    ASSERT_TRUE(base::isUnknown(data.relative_position_length));
+    ASSERT_TRUE(base::isUnknown(data.relative_position_heading.getDeg()));
+
+    ASSERT_FLOAT_EQ(0.0212, data.accuracy_NED.x());
+    ASSERT_FLOAT_EQ(0.4221, data.accuracy_NED.y());
+    ASSERT_FLOAT_EQ(0.8353, data.accuracy_NED.z());
+    ASSERT_TRUE(base::isUnknown(data.accuracy_length));
+    ASSERT_TRUE(base::isUnknown(data.accuracy_heading.getDeg()));
+
+    ASSERT_EQ(1 | 2 | 4 | 512, data.flags);
+}
+
+TEST_F(UBXTest, it_throws_if_the_RXM_RTCM_payload_is_too_small) {
+    vector<uint8_t> payload;
+    payload.resize(7);
+    ASSERT_THROW(UBX::parseRTCMReceivedMessage(payload), std::invalid_argument);
+}
+
+TEST_F(UBXTest, it_throws_if_the_RXM_RTCM_payload_is_too_big) {
+    vector<uint8_t> payload;
+    payload.resize(9);
+    ASSERT_THROW(UBX::parseRTCMReceivedMessage(payload), std::invalid_argument);
+}
+
+TEST_F(UBXTest, it_parses_a_RXM_RTCM_message) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 2); // version
+    toLittleEndian<uint8_t>(payload, 9); // reserved0
+    toLittleEndian<uint16_t>(payload, 0); // subtype
+    toLittleEndian<uint16_t>(payload, 524); // reference station
+    toLittleEndian<uint16_t>(payload, 1084); // message type
+
+    auto data = UBX::parseRTCMReceivedMessage(payload);
+
+    ASSERT_EQ(524, data.reference_station_id);
+    ASSERT_EQ(9, data.flags);
+    ASSERT_EQ(1084, data.message_type);
+}
+
+TEST_F(UBXTest, it_encodes_the_4072_message_with_its_subtype) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint8_t>(payload, 2); // version
+    toLittleEndian<uint8_t>(payload, 9); // flags
+    toLittleEndian<uint16_t>(payload, 1); // subtype
+    toLittleEndian<uint16_t>(payload, 524); // reference station
+    toLittleEndian<uint16_t>(payload, 4072); // message type
+
+    auto data = UBX::parseRTCMReceivedMessage(payload);
+
+    ASSERT_EQ(524, data.reference_station_id);
+    ASSERT_EQ(9, data.flags);
+    ASSERT_EQ(40721, data.message_type);
 }

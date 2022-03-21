@@ -12,7 +12,14 @@ namespace gps_ublox {
     struct SatelliteInfo {
         uint32_t time_of_week;  // in ms
         uint8_t version;
-        uint8_t n_sats;
+
+        enum Flags {
+            USED_IN_SOLUTION = 1 << 3,
+            DIFFERENTIAL_AVAILABLE = 1 << 6,
+            RTCM_CORRECTIONS_USED = 1 << 17,
+            PSEUDORANGE_CORRECTIONS_USED = 1 << 20,
+            CARRIER_RANGE_CORRECTIONS_USED = 1 << 21
+        };
 
         /**
          * The actual satellite info

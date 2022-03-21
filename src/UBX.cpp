@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <gps_ublox/UBX.hpp>
-#include <gps_ublox/GPSData.hpp>
+#include <gps_ublox/PVT.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
 
@@ -114,16 +114,19 @@ void toLittleEndian(vector<uint8_t> &buffer, T value)
 
 RFInfo UBX::parseRF(const vector<uint8_t> &payload) {
     if (payload.size() < 4) {
-        std::stringstream ss("Invalid RF payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+        throw std::invalid_argument(
+            "Invalid RF payload (size " + to_string(payload.size()) + ", "
+            "expected at least 4)"
+        );
     }
 
     uint8_t n_blocks = payload[1];
-    if (payload.size() != 4 + (n_blocks * (unsigned int)24)) {
-        std::stringstream ss("Invalid RF payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+    unsigned int expected = 4 + (n_blocks * 24u);
+    if (payload.size() != expected) {
+        throw std::invalid_argument(
+            "Invalid RF payload (size " + to_string(payload.size()) + ", "
+            "expected " + to_string(expected) + ")"
+        );
     }
 
     RFInfo data;
@@ -150,16 +153,19 @@ RFInfo UBX::parseRF(const vector<uint8_t> &payload) {
 
 SignalInfo UBX::parseSIG(const vector<uint8_t> &payload) {
     if (payload.size() < 8) {
-        std::stringstream ss("Invalid SIG payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+        throw std::invalid_argument(
+            "Invalid SIG payload (size " + to_string(payload.size())
+            + ", expected at least 8)"
+        );
     }
 
     uint8_t n_signals = payload[5];
-    if (payload.size() != 8 + (n_signals * (unsigned int)16)) {
-        std::stringstream ss("Invalid SIG payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+    unsigned int expected = 8 + (n_signals * 16u);
+    if (payload.size() != expected) {
+        throw std::invalid_argument(
+            "Invalid SIG payload (size " + to_string(payload.size())
+            + ", expected " + to_string(expected) + ")"
+        );
     }
 
     SignalInfo data;
@@ -185,22 +191,24 @@ SignalInfo UBX::parseSIG(const vector<uint8_t> &payload) {
 
 SatelliteInfo UBX::parseSAT(const vector<uint8_t> &payload) {
     if (payload.size() < 8) {
-        std::stringstream ss("Invalid SAT payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+        throw std::invalid_argument(
+            "Invalid SAT payload (size " + to_string(payload.size()) +
+            " smaller than minimum of 8)"
+        );
     }
 
     uint8_t n_sats = payload[5];
-    if (payload.size() != 8 + (n_sats * (unsigned int)12)) {
-        std::stringstream ss("Invalid SAT payload (invalid size = ");
-        ss << payload.size() << ")";
-        throw std::invalid_argument(ss.str());
+    size_t expected = 8 + (n_sats * 12u);
+    if (payload.size() != expected) {
+        throw std::invalid_argument(
+            "Invalid SAT payload (size " + to_string(payload.size()) +
+            ", expected " + to_string(expected) + ")"
+        );
     }
 
     SatelliteInfo data;
     data.time_of_week = fromLittleEndian<uint32_t>(&payload[0]);
     data.version = payload[4];
-    data.n_sats = payload[5];
     data.signals.resize(n_sats);
 
     for (size_t i = 0; i < n_sats; i++) {
@@ -215,7 +223,26 @@ SatelliteInfo UBX::parseSAT(const vector<uint8_t> &payload) {
     return data;
 }
 
-GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
+const base::Time CORRECTION_AGE[] = {
+    base::Time::fromSeconds(9999),
+    base::Time::fromSeconds(0),
+    base::Time::fromSeconds(1),
+    base::Time::fromSeconds(2),
+    base::Time::fromSeconds(5),
+    base::Time::fromSeconds(10),
+    base::Time::fromSeconds(15),
+    base::Time::fromSeconds(20),
+    base::Time::fromSeconds(30),
+    base::Time::fromSeconds(45),
+    base::Time::fromSeconds(60),
+    base::Time::fromSeconds(90),
+    base::Time::fromSeconds(120),
+    base::Time::fromSeconds(120),
+    base::Time::fromSeconds(120),
+    base::Time::fromSeconds(120)
+};
+
+PVT UBX::parsePVT(const vector<uint8_t> &payload) {
     if (payload.size() != 92) {
         std::stringstream ss;
         ss << "Invalid PVT payload (invalid size = "
@@ -223,7 +250,7 @@ GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
         throw std::invalid_argument(ss.str());
     }
 
-    GPSData data;
+    PVT data;
     data.time_of_week = fromLittleEndian<uint32_t>(&payload[0]);
 
     tm utctm;
@@ -240,7 +267,7 @@ GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
 
     data.valid = fromLittleEndian<uint8_t>(&payload[11]);
     data.time_accuracy = fromLittleEndian<uint32_t>(&payload[12]);
-    data.fix_type = static_cast<GPSData::GNSSFixType>(fromLittleEndian<uint8_t>(&payload[20]));
+    data.fix_type = static_cast<PVT::GNSSFixType>(fromLittleEndian<uint8_t>(&payload[20]));
     data.fix_flags = fromLittleEndian<uint8_t>(&payload[21]);
     data.additional_flags = fromLittleEndian<uint8_t>(&payload[22]);
     data.num_sats = fromLittleEndian<uint8_t>(&payload[23]);
@@ -259,9 +286,70 @@ GPSData UBX::parsePVT(const vector<uint8_t> &payload) {
     data.heading_accuracy = base::Angle::fromDeg((double)fromLittleEndian<uint32_t>(&payload[72]) * 1e-5);
     data.position_dop = (double)fromLittleEndian<uint16_t>(&payload[76]) * 0.01;
     data.more_flags = fromLittleEndian<uint8_t>(&payload[78]);
+    data.age_of_differential_corrections = CORRECTION_AGE[(data.more_flags >> 1) & 0xF];
     data.heading_of_vehicle = base::Angle::fromDeg((double)fromLittleEndian<int32_t>(&payload[84]) * 1e-5);
     data.magnetic_declination = base::Angle::fromDeg((double)fromLittleEndian<int16_t>(&payload[88]) * 1e-2);
     data.magnetic_declination_accuracy = base::Angle::fromDeg((double)fromLittleEndian<uint16_t>(&payload[90]) * 1e-2);
+    return data;
+}
+
+RelPosNED UBX::parseRelPosNED(const vector<uint8_t> &payload) {
+    if (payload.size() != 64) {
+        std::stringstream ss;
+        ss << "Invalid RelPosNED payload (invalid size = "
+           << payload.size() << ", expected 64)";
+        throw std::invalid_argument(ss.str());
+    }
+
+    RelPosNED data;
+    data.time_of_week = fromLittleEndian<uint32_t>(&payload[4]);
+    data.reference_station_id = fromLittleEndian<uint32_t>(&payload[2]);
+    data.flags = fromLittleEndian<uint32_t>(&payload[60]);
+
+    if (data.flags & RelPosNED::FLAGS_RELATIVE_POSITION_VALID) {
+        int32_t relPosN = fromLittleEndian<int32_t>(&payload[8]);
+        int32_t relPosE = fromLittleEndian<int32_t>(&payload[12]);
+        int32_t relPosD = fromLittleEndian<int32_t>(&payload[16]);
+
+        int8_t relPosHPN = fromLittleEndian<int8_t>(&payload[32]);
+        int8_t relPosHPE = fromLittleEndian<int8_t>(&payload[33]);
+        int8_t relPosHPD = fromLittleEndian<int8_t>(&payload[34]);
+
+        int32_t accN = fromLittleEndian<int32_t>(&payload[36]);
+        int32_t accE = fromLittleEndian<int32_t>(&payload[40]);
+        int32_t accD = fromLittleEndian<int32_t>(&payload[44]);
+
+        data.relative_position_NED = base::Vector3d(
+            static_cast<double>(relPosN) * 1e-2 + static_cast<double>(relPosHPN) * 1e-4,
+            static_cast<double>(relPosE) * 1e-2 + static_cast<double>(relPosHPE) * 1e-4,
+            static_cast<double>(relPosD) * 1e-2 + static_cast<double>(relPosHPD) * 1e-4
+        );
+
+        data.accuracy_NED = base::Vector3d(
+            static_cast<double>(accN) * 1e-4,
+            static_cast<double>(accE) * 1e-4,
+            static_cast<double>(accD) * 1e-4
+        );
+    }
+
+    if (data.flags & RelPosNED::FLAGS_HEADING_VALID) {
+        int32_t relPosLength = fromLittleEndian<int32_t>(&payload[20]);
+        int32_t relPosAngle = fromLittleEndian<int32_t>(&payload[24]);
+
+        int8_t relPosHPLength = fromLittleEndian<int8_t>(&payload[35]);
+
+        int32_t accLength = fromLittleEndian<int32_t>(&payload[48]);
+        int32_t accHeading = fromLittleEndian<int32_t>(&payload[52]);
+
+        data.relative_position_length =
+            static_cast<double>(relPosLength) * 1e-2 +
+            static_cast<double>(relPosHPLength) * 1e-4;
+        data.relative_position_heading =
+            base::Angle::fromDeg(static_cast<double>(relPosAngle) * 1e-5);
+        data.accuracy_length = static_cast<double>(accLength) * 1e-4;
+        data.accuracy_heading = base::Angle::fromDeg(static_cast<double>(accHeading) * 1e-5);
+    }
+
     return data;
 }
 
@@ -274,6 +362,27 @@ BoardInfo UBX::parseVER(const vector<uint8_t> &payload) {
         info.extensions.push_back(string(reinterpret_cast<const char*>(&payload[i])));
     }
     return info;
+}
+
+RTCMReceivedMessage UBX::parseRTCMReceivedMessage(const std::vector<uint8_t> &payload) {
+    if (payload.size() != 8) {
+        throw std::invalid_argument(
+            "Invalid payload size for UBX-RXM-RTCM, got " + to_string(payload.size()) +
+            ", was expecting 8"
+        );
+    }
+
+    RTCMReceivedMessage msg;
+    msg.time = base::Time::now();
+    msg.flags = payload[1];
+
+    uint16_t msgType = fromLittleEndian<uint16_t>(&payload[6]);
+    if (msgType == 4072) {
+        msgType = msgType * 10 + fromLittleEndian<uint16_t>(&payload[2]);
+    }
+    msg.message_type = msgType;
+    msg.reference_station_id = fromLittleEndian<uint16_t>(&payload[4]);
+    return msg;
 }
 
 namespace gps_ublox {

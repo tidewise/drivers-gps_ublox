@@ -1,5 +1,2 @@
-rock_gtest(test_UBX suite.cpp test_UBX.cpp
-   DEPS gps_ublox)
-
-rock_gtest(test_Driver suite.cpp test_Driver.cpp
+rock_gtest(test_suite suite.cpp test_UBX.cpp test_Driver.cpp test_cfg.cpp
    DEPS gps_ublox)

@@ -1,6 +1,8 @@
-#include <gps_ublox/Driver.hpp>
-#include <gps_ublox/GPSData.hpp>
+#include <gps_base/rtcm3.hpp>
 #include <gps_ublox/BoardInfo.hpp>
+#include <gps_ublox/cfg.hpp>
+#include <gps_ublox/Driver.hpp>
+#include <gps_ublox/PVT.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <base/Time.hpp>
 #include <iostream>
@@ -17,7 +19,15 @@ Driver::Driver() : iodrivers_base::Driver(BUFFER_SIZE)
 
 int Driver::extractPacket(const uint8_t *buffer, size_t buffer_size) const
 {
-    return UBX::extractPacket(buffer, buffer_size);
+    if (buffer_size == 0) {
+        return 0;
+    }
+    else if (gps_base::rtcm3::isPreamble(buffer, buffer_size)) {
+        return gps_base::rtcm3::extractPacket(buffer, buffer_size);
+    }
+    else {
+        return UBX::extractPacket(buffer, buffer_size);
+    }
 }
 
 BoardInfo Driver::readBoardInfo() {
@@ -25,9 +35,19 @@ BoardInfo Driver::readBoardInfo() {
     return UBX::parseVER(frame.payload);
 }
 
-GPSData Driver::readGPSData() {
+PVT Driver::readPVT() {
     Frame frame = pollFrame(MSG_CLASS_NAV, MSG_ID_PVT);
     return UBX::parsePVT(frame.payload);
+}
+
+PVT Driver::waitForPVT() {
+    Frame frame = waitForFrame(MSG_CLASS_NAV, MSG_ID_PVT);
+    return UBX::parsePVT(frame.payload);
+}
+
+RelPosNED Driver::waitForRelPosNED() {
+    Frame frame = waitForFrame(MSG_CLASS_NAV, MSG_ID_RELPOSNED);
+    return UBX::parseRelPosNED(frame.payload);
 }
 
 RFInfo Driver::readRFInfo() {
@@ -56,6 +76,52 @@ Frame Driver::pollFrame(uint8_t class_id, uint8_t msg_id)
     return waitForFrame(class_id, msg_id);
 }
 
+void Driver::poll(PollCallbacks& callbacks) {
+    pollOneFrame(callbacks, getReadTimeout());
+
+    // Pull as much RTCM data as possible in one shot
+    try {
+        while(true) {
+            pollOneFrame(callbacks, base::Time());
+        }
+    }
+    catch(iodrivers_base::TimeoutError&) {
+    }
+}
+
+void Driver::pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout) {
+    int bytes = readPacket(mReadBuffer, BUFFER_SIZE, timeout);
+
+    if (bytes == 0) {
+        return;
+    }
+
+    if (gps_base::rtcm3::isPreamble(mReadBuffer, bytes)) {
+        callbacks.rtcm(mReadBuffer, bytes);
+        return;
+    }
+
+    Frame frame = Frame::fromPacket(mReadBuffer, bytes);
+    if (frame.msg_class == MSG_CLASS_NAV && frame.msg_id == MSG_ID_PVT) {
+        callbacks.pvt(UBX::parsePVT(frame.payload));
+    }
+    else if (frame.msg_class == MSG_CLASS_NAV && frame.msg_id == MSG_ID_RELPOSNED) {
+        callbacks.relposned(UBX::parseRelPosNED(frame.payload));
+    }
+    else if (frame.msg_class == UBX::MSG_CLASS_NAV && frame.msg_id == UBX::MSG_ID_SAT) {
+        callbacks.satelliteInfo(UBX::parseSAT(frame.payload));
+    }
+    else if (frame.msg_class == UBX::MSG_CLASS_NAV && frame.msg_id == UBX::MSG_ID_SIG) {
+        callbacks.signalInfo(UBX::parseSIG(frame.payload));
+    }
+    else if (frame.msg_class == UBX::MSG_CLASS_MON && frame.msg_id == UBX::MSG_ID_RF) {
+        callbacks.rfInfo(UBX::parseRF(frame.payload));
+    }
+    else if (frame.msg_class == UBX::MSG_CLASS_RXM && frame.msg_id == UBX::MSG_ID_RTCM) {
+        callbacks.rtcmReceivedMessage(UBX::parseRTCMReceivedMessage(frame.payload));
+    }
+}
+
 Frame Driver::waitForPacket(const uint8_t *class_id, const uint8_t *msg_id,
                             const std::vector<uint8_t> *payload)
 {
@@ -63,6 +129,10 @@ Frame Driver::waitForPacket(const uint8_t *class_id, const uint8_t *msg_id,
     while (base::Time::now() < deadline) {
         base::Time remaining = deadline - base::Time::now();
         int bytes = readPacket(mReadBuffer, BUFFER_SIZE, remaining);
+
+        if (gps_base::rtcm3::isPreamble(mReadBuffer, bytes)) {
+            continue;
+        }
 
         Frame frame = Frame::fromPacket(mReadBuffer, bytes);
         if (class_id && *class_id != frame.msg_class) continue;
@@ -109,83 +179,66 @@ template void Driver::setConfigKeyValue<bool>(uint32_t, bool, bool);
 template void Driver::setConfigKeyValue<uint8_t>(uint32_t, uint8_t, bool);
 template void Driver::setConfigKeyValue<uint16_t>(uint32_t, uint16_t, bool);
 
-void Driver::setPortEnabled(DevicePort port, bool state, bool persist)
-{
-    ConfigKeyId key_id;
-    switch (port) {
-        case PORT_I2C: key_id = I2C_ENABLED; break;
-        case PORT_SPI: key_id = SPI_ENABLED; break;
-        case PORT_UART1: key_id = UART1_ENABLED; break;
-        case PORT_UART2: key_id = UART2_ENABLED; break;
-        case PORT_USB: key_id = USB_ENABLED; break;
-    }
-    setConfigKeyValue(key_id, state, persist);
+void Driver::setPortEnabled(DevicePort port, bool state, bool persist) {
+    setConfigKeyValue(cfg::getPortControlKey(port), state, persist);
 }
 
 void Driver::setOutputRate(DevicePort port, MessageOutputType msg, uint8_t rate, bool persist) {
-    uint8_t port_offset;
-    // Unfortunately, message offsets are different from the ones
-    // in CFG-IN/OUTPROT, so we have to recalculate here :(
-    switch (port) {
-        case PORT_I2C: port_offset = 0; break;
-        case PORT_UART1: port_offset = 1; break;
-        case PORT_UART2: port_offset = 2; break;
-        case PORT_USB: port_offset = 3; break;
-        case PORT_SPI: port_offset = 4; break;
-    }
+    setConfigKeyValue(cfg::getOutputRateKey(port, msg), rate, persist);
+}
 
-    uint32_t key_id = msg + port_offset;
-    setConfigKeyValue(key_id, rate, persist);
+void Driver::setRTCMOutputRate(DevicePort port, uint16_t msg, uint8_t rate, bool persist) {
+    setConfigKeyValue(cfg::getRTCMOutputKey(port, msg), rate, persist);
 }
 
 void Driver::setOdometer(bool state, bool persist)
 {
-    setConfigKeyValue(ODO_USE_ODO, state, persist);
+    setConfigKeyValue(cfg::ODO_USE_ODO, state, persist);
 }
 
 void Driver::setLowSpeedCourseOverGroundFilter(bool state, bool persist)
 {
-    setConfigKeyValue(ODO_USE_COG, state, persist);
+    setConfigKeyValue(cfg::ODO_USE_COG, state, persist);
 }
 
 void Driver::setOutputLowPassFilteredVelocity(bool state, bool persist)
 {
-    setConfigKeyValue(ODO_OUTLPVEL, state, persist);
+    setConfigKeyValue(cfg::ODO_OUTLPVEL, state, persist);
 }
 
 void Driver::setOutputLowPassFilteredHeading(bool state, bool persist)
 {
-    setConfigKeyValue(ODO_OUTLPCOG, state, persist);
+    setConfigKeyValue(cfg::ODO_OUTLPCOG, state, persist);
 }
 
 void Driver::setOdometerProfile(OdometerProfile profile, bool persist)
 {
-    setConfigKeyValue(ODO_PROFILE, static_cast<uint8_t>(profile), persist);
+    setConfigKeyValue(cfg::ODO_PROFILE, static_cast<uint8_t>(profile), persist);
 }
 
 void Driver::setUpperSpeedLimitForHeadingFilter(uint8_t speed, bool persist)
 {
-    setConfigKeyValue(ODO_COGMAXSPEED, speed, persist);
+    setConfigKeyValue(cfg::ODO_COGMAXSPEED, speed, persist);
 }
 
 void Driver::setMaxPositionAccuracyForLowSpeedHeadingFilter(uint8_t accuracy, bool persist)
 {
-    setConfigKeyValue(ODO_COGMAXPOSACC, accuracy, persist);
+    setConfigKeyValue(cfg::ODO_COGMAXPOSACC, accuracy, persist);
 }
 
 void Driver::setVelocityLowPassFilterLevel(uint8_t gain, bool persist)
 {
-    setConfigKeyValue(ODO_VELLPGAIN, gain, persist);
+    setConfigKeyValue(cfg::ODO_VELLPGAIN, gain, persist);
 }
 
 void Driver::setHeadingLowPassFilterLevel(uint8_t gain, bool persist)
 {
-    setConfigKeyValue(ODO_COGLPGAIN, gain, persist);
+    setConfigKeyValue(cfg::ODO_COGLPGAIN, gain, persist);
 }
 
 void Driver::setPositionMeasurementPeriod(uint16_t period, bool persist)
 {
-    setConfigKeyValue(RATE_MEAS, period, persist);
+    setConfigKeyValue(cfg::RATE_MEAS, period, persist);
 }
 
 void Driver::setMeasurementsPerSolutionRatio(uint16_t ratio, bool persist)
@@ -193,7 +246,7 @@ void Driver::setMeasurementsPerSolutionRatio(uint16_t ratio, bool persist)
     if (ratio > 127) {
         throw std::invalid_argument("Maximum number of measurements per solution is 127");
     }
-    setConfigKeyValue(RATE_NAV, ratio, persist);
+    setConfigKeyValue(cfg::RATE_NAV, ratio, persist);
 }
 
 void Driver::setPortProtocol(DevicePort port, DataDirection direction,
@@ -203,24 +256,22 @@ void Driver::setPortProtocol(DevicePort port, DataDirection direction,
     setConfigKeyValue(key_id, state, persist);
 }
 
-void Driver::setTimeSystem(TimeSystem system, bool persist)
+void Driver::setMeasurementRefTime(MeasurementRefTime system, bool persist)
 {
-    uint32_t key_id = RATE_TIMEREF;
-    setConfigKeyValue(key_id, static_cast<uint8_t>(system), persist);
+    setConfigKeyValue(cfg::RATE_TIMEREF, static_cast<uint8_t>(system), persist);
 }
 
 void Driver::setDynamicModel(DynamicModel model, bool persist)
 {
-    uint32_t key_id = NAVSPG_DYNMODEL;
-    setConfigKeyValue(key_id, static_cast<uint8_t>(model), persist);
+    setConfigKeyValue(cfg::NAVSPG_DYNMODEL, static_cast<uint8_t>(model), persist);
 }
 
 void Driver::setSpeedThreshold(uint8_t speed, bool persist)
 {
-    setConfigKeyValue(MOT_GNSSSPEED_THRS, speed, persist);
+    setConfigKeyValue(cfg::MOT_GNSSSPEED_THRS, speed, persist);
 }
 
 void Driver::setStaticHoldDistanceThreshold(uint16_t distance, bool persist)
 {
-    setConfigKeyValue(MOT_GNSSDIST_THRS, distance, persist);
+    setConfigKeyValue(cfg::MOT_GNSSDIST_THRS, distance, persist);
 }
