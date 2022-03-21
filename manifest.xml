@@ -2,6 +2,7 @@
   <description brief="Driver library for u-blox GPS modules">
     Driver library for u-blox GPS modules
   </description>
+  <version>0.1</version>
   <author>Gabriel Arjones/gabriel.arjones@tidewise.io</author>
   <license>3-clause BSD</license>
   <copyright>
