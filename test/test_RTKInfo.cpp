@@ -13,6 +13,7 @@ TEST_F(RTKInfoTest, update_sets_time_from_PVT_time) {
     RTKInfo info;
     PVT pvt;
     pvt.time = base::Time::now();
+    pvt.fix_flags = 0;
     info.update(pvt);
     ASSERT_EQ(pvt.time, info.time);
 }
