@@ -151,6 +151,18 @@ Frame Driver::readFrame()
     return waitForPacket();
 }
 
+void Driver::writeRTCM(std::vector<uint8_t> const& data) {
+    mRTCMReassembly.push(data);
+    while(true) {
+        vector<uint8_t> message = mRTCMReassembly.pull();
+        if (message.empty()) {
+            return;
+        }
+
+        writePacket(message.data(), message.size());
+    }
+}
+
 Frame Driver::waitForFrame(uint8_t class_id, uint8_t msg_id)
 {
     return waitForPacket(&class_id, &msg_id);

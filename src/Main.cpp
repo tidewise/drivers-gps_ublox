@@ -11,7 +11,7 @@ using namespace std;
 
 struct RTCMForwarder : public iodrivers_base::Driver {
     int extractPacket(uint8_t const* buffer, size_t size) const {
-        return gps_base::rtcm3::extractPacket(buffer, size);
+        throw std::logic_error("only use readRaw");
     }
 
     RTCMForwarder()
@@ -295,7 +295,8 @@ void poll(Driver& driver, RTCMForwarder* rtcm_in, RTCMForwarder* rtcm_out) {
         fds[1].events = POLLIN;
     }
 
-    uint8_t rtcmBuffer[4096];
+    vector<uint8_t> rtcmBuffer;
+    rtcmBuffer.reserve(4096);
     while(true) {
         int ret = poll(fds, poll_n, 2000);
         if (ret <= 0) {
@@ -303,11 +304,9 @@ void poll(Driver& driver, RTCMForwarder* rtcm_in, RTCMForwarder* rtcm_out) {
         }
 
         if (fds[1].revents & POLLIN) {
-            do {
-                size_t s = rtcm_in->readPacket(rtcmBuffer, 4096, base::Time::fromMilliseconds(10));
-                driver.writePacket(rtcmBuffer, s);
-            }
-            while (rtcm_in->hasPacket());
+            size_t s = rtcm_in->readRaw(rtcmBuffer.data(), 4096);
+            rtcmBuffer.resize(s);
+            driver.writeRTCM(rtcmBuffer);
         }
 
         if (fds[0].revents & POLLIN) {

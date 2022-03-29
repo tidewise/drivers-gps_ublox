@@ -9,6 +9,8 @@
 #include <gps_ublox/SatelliteInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
 #include <gps_ublox/UBX.hpp>
+
+#include <gps_base/RTCMReassembly.hpp>
 #include <iodrivers_base/Driver.hpp>
 
 namespace gps_ublox
@@ -46,6 +48,8 @@ namespace gps_ublox
                                      const std::vector<uint8_t> *payload = nullptr);
             bool waitForAck(uint8_t class_id, uint8_t msg_id);
             void pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout);
+
+            gps_base::RTCMReassembly mRTCMReassembly;
 
         protected:
             /** Implements iodrivers_base's extractPacket protocol
@@ -246,6 +250,13 @@ namespace gps_ublox
              * \c setPortProtocol
              */
             void poll(PollCallbacks& callbacks);
+
+            /** Write RTCM data to the device
+             *
+             * The data does not have to be cmoplete RTCM messages, the driver
+             * will internally reassemble full messages before sending them
+             */
+            void writeRTCM(std::vector<uint8_t> const& data);
     };
 
 } // end namespace gps_ublox
