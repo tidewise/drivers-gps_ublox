@@ -8,10 +8,11 @@
 #include <stdexcept>
 #include <vector>
 
-#include <gps_ublox/UBX.hpp>
+#include <gps_ublox/CommsInfo.hpp>
 #include <gps_ublox/PVT.hpp>
 #include <gps_ublox/RFInfo.hpp>
 #include <gps_ublox/SignalInfo.hpp>
+#include <gps_ublox/UBX.hpp>
 
 using namespace std;
 using namespace gps_ublox;
@@ -351,6 +352,86 @@ RelPosNED UBX::parseRelPosNED(const vector<uint8_t> &payload) {
     }
 
     return data;
+}
+
+CommsInfo UBX::parseCommsInfo(const std::vector<uint8_t> &payload) {
+    if (payload.size() < 8) {
+        throw invalid_argument(
+            "payload size smaller than 8, cannot be a UBX-MON-COMMS"
+        );
+    }
+
+    uint8_t portCount = payload[1];
+    size_t expectedSize = portCount * 40 + 8;
+    if (payload.size() != expectedSize) {
+        throw invalid_argument(
+            "UBX-MON-COMMS with " + to_string(portCount) + " ports should be of size " +
+            to_string(expectedSize) + ", but got payload of size " +
+            to_string(payload.size())
+        );
+    }
+
+    CommsInfo info;
+    info.time = base::Time::now();
+    info.tx_errors = payload[2];
+
+    CommsInfo::PortInfo portInfo;
+    uint8_t const* const protocols = payload.data() + 4;
+    for (int i = 0; i < 4; ++i) {
+        uint16_t protocolId = protocols[i];
+        if (protocolId != 0xff) {
+            CommsInfo::MessageCount count;
+            count.protocol = static_cast<CommsInfo::Protocols>(protocolId);
+            portInfo.message_count.push_back(count);
+        }
+    }
+
+    uint8_t const* portBuffer = payload.data() + 8;
+    for (int portI = 0; portI < portCount; ++portI, portBuffer += 40) {
+        switch(fromLittleEndian<uint16_t>(portBuffer)) {
+            case 0:
+                portInfo.device_port = PORT_I2C;
+                break;
+            case 0x0100:
+                portInfo.device_port = PORT_UART1;
+                break;
+            case 0x0201:
+                portInfo.device_port = PORT_UART2;
+                break;
+            case 0x0300:
+                portInfo.device_port = PORT_USB;
+                break;
+            case 0x0400:
+                portInfo.device_port = PORT_SPI;
+                break;
+        }
+
+        portInfo.tx_pending = fromLittleEndian<uint16_t>(portBuffer + 2);
+        portInfo.tx_bytes = fromLittleEndian<uint32_t>(portBuffer + 4);
+        portInfo.tx_usage = fromLittleEndian<uint8_t>(portBuffer + 8);
+        portInfo.tx_peak_usage = fromLittleEndian<uint8_t>(portBuffer + 9);
+
+        portInfo.rx_pending = fromLittleEndian<uint16_t>(portBuffer + 10);
+        portInfo.rx_bytes = fromLittleEndian<uint32_t>(portBuffer + 12);
+        portInfo.rx_usage = fromLittleEndian<uint8_t>(portBuffer + 16);
+        portInfo.rx_peak_usage = fromLittleEndian<uint8_t>(portBuffer + 17);
+
+        portInfo.overrun_errors = fromLittleEndian<uint16_t>(portBuffer + 18);
+
+        auto message_count_it = portInfo.message_count.begin();
+        for (int i = 0; i < 4; ++i) {
+            if (protocols[i] != 0xff) {
+                message_count_it->count =
+                    fromLittleEndian<uint16_t>(portBuffer + 20 + i * 2);
+                message_count_it++;
+
+            }
+        }
+
+        info.per_port.push_back(portInfo);
+    }
+
+    return info;
 }
 
 BoardInfo UBX::parseVER(const vector<uint8_t> &payload) {
