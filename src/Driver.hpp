@@ -34,6 +34,7 @@ namespace gps_ublox
                 virtual void satelliteInfo(SatelliteInfo const& info) {};
                 virtual void signalInfo(SignalInfo const& info) {};
                 virtual void rfInfo(RFInfo const& info) {};
+                virtual void commsInfo(CommsInfo const& info) {};
             };
 
         private:

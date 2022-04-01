@@ -72,7 +72,8 @@ namespace gps_ublox {
         MSGOUT_NAV_SAT = 0x20910015,
         MSGOUT_NAV_SIG = 0x20910345,
         MSGOUT_MON_RF = 0x20910359,
-        MSGOUT_RXM_RTCM = 0x20910268
+        MSGOUT_RXM_RTCM = 0x20910268,
+        MSGOUT_MON_COMMS = 0x2091034f
     };
 
     namespace cfg {

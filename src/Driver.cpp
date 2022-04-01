@@ -120,6 +120,9 @@ void Driver::pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout) {
     else if (frame.msg_class == UBX::MSG_CLASS_RXM && frame.msg_id == UBX::MSG_ID_RTCM) {
         callbacks.rtcmReceivedMessage(UBX::parseRTCMReceivedMessage(frame.payload));
     }
+    else if (frame.msg_class == UBX::MSG_CLASS_MON && frame.msg_id == UBX::MSG_ID_COMMS) {
+        callbacks.commsInfo(UBX::parseCommsInfo(frame.payload));
+    }
 }
 
 Frame Driver::waitForPacket(const uint8_t *class_id, const uint8_t *msg_id,
