@@ -67,6 +67,7 @@ int usage()
         << "  cfg-reset                            reset configuration to factory defaults\n"
         << "                                       It does not save the reset configuration\n"
         << "  cfg-save                             save configuration to non-volatile memory\n"
+        << "  cfg-uart PORT BAUDRATE               configure a UART port\n"
         << "  enable-port PORT ENABLED             enable communication on a given port\n"
         << "  poll-solution PORT [CORR_SOURCE]     poll and display solution, optionally receiving\n"
         << "                                       corrections on the given iodrivers_base-compatible URI\n"
@@ -358,6 +359,18 @@ int main(int argc, char** argv)
 
         driver.openURI(uri);
         driver.setPortEnabled(port, enable);
+    }
+    else if (cmd == "cfg-uart") {
+        if (argc != 5) {
+            usage();
+            return 1;
+        }
+
+        DevicePort port = portFromString(argv[3]);
+        uint32_t rate = std::atoi(argv[4]);
+
+        driver.openURI(uri);
+        driver.setUARTBaudrate(port, rate, false);
     } else if ((cmd == "enable-input") || (cmd == "enable-output")) {
         bool input = cmd == "enable-input";
 

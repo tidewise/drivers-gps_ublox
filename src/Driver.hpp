@@ -81,6 +81,14 @@ namespace gps_ublox
              */
             void resetConfigurationToDefaults();
 
+            /** Change a UART's port baudrate
+             *
+             * @param port Port to be changed
+             * @param rate The baud rate
+             * @param persist Whether the configuration should be persisted
+             */
+            void setUARTBaudrate(DevicePort port, uint32_t rate, bool persist = true);
+
             /** Whether odometer is used or not
              *
              * @param state True if odometer is to be enabled

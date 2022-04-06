@@ -226,6 +226,24 @@ void Driver::resetConfigurationToDefaults() {
     waitForAck(0x06, 0x09);
 }
 
+void Driver::setUARTBaudrate(DevicePort port, uint32_t rate, bool persist) {
+    cfg::ConfigKeyId key;
+    switch(port) {
+        case PORT_UART1:
+            key = cfg::UART1_BAUDRATE;
+            break;
+        case PORT_UART2:
+            key = cfg::UART2_BAUDRATE;
+            break;
+        default:
+            throw std::invalid_argument(
+                "setUARTBaudrate given a port that is not a UART"
+            );
+    }
+
+    setConfigKeyValue(key, rate, persist);
+}
+
 void Driver::setOutputRate(DevicePort port, MessageOutputType msg, uint8_t rate, bool persist) {
     setConfigKeyValue(cfg::getOutputRateKey(port, msg), rate, persist);
 }
