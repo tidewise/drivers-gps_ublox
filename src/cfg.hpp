@@ -84,6 +84,8 @@ namespace gps_ublox {
             SPI_ENABLED = 0x10640006,
             UART1_ENABLED = 0x10520005,
             UART2_ENABLED = 0x10530005,
+            UART1_BAUDRATE = 0x40520001,
+            UART2_BAUDRATE = 0x40530001,
             USB_ENABLED = 0x10650001,
             ODO_USE_ODO = 0x10220001,
             ODO_USE_COG = 0x10220002,

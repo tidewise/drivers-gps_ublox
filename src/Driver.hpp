@@ -73,6 +73,14 @@ namespace gps_ublox
              */
             void setPortEnabled(DevicePort port, bool state, bool persist = true);
 
+            /** Save current configuration to non-volatile memory
+             */
+            void saveConfiguration();
+
+            /** Reset configuration to defaults
+             */
+            void resetConfigurationToDefaults();
+
             /** Whether odometer is used or not
              *
              * @param state True if odometer is to be enabled

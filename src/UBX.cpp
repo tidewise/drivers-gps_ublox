@@ -470,10 +470,9 @@ namespace gps_ublox {
 namespace UBX {
 
 template<typename T>
-std::vector<uint8_t> getConfigValueSetPacket(uint32_t key_id,
-                                             T value,
-                                             bool persist)
-{
+std::vector<uint8_t> getConfigValueSetPacket(
+    uint32_t key_id, T value, bool persist
+) {
     Frame frame;
     frame.msg_class = MSG_CLASS_CFG;
     frame.msg_id = MSG_ID_VALSET;
@@ -490,6 +489,7 @@ std::vector<uint8_t> getConfigValueSetPacket(uint32_t key_id,
 
 template vector<uint8_t> getConfigValueSetPacket(uint32_t, uint8_t, bool);
 template vector<uint8_t> getConfigValueSetPacket(uint32_t, uint16_t, bool);
+template vector<uint8_t> getConfigValueSetPacket(uint32_t, uint32_t, bool);
 
 template<>
 vector<uint8_t> getConfigValueSetPacket<bool>(uint32_t key_id,

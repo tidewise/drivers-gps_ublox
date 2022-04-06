@@ -64,6 +64,9 @@ int usage()
         << "Known commands:\n"
         << "  enable-input PORT PROTOCOL on|off    enable input protocol on a given port\n"
         << "  enable-output PORT PROTOCOL on|off   enable output protocol on a given port\n"
+        << "  cfg-reset                            reset configuration to factory defaults\n"
+        << "                                       It does not save the reset configuration\n"
+        << "  cfg-save                             save configuration to non-volatile memory\n"
         << "  enable-port PORT ENABLED             enable communication on a given port\n"
         << "  poll-solution PORT [CORR_SOURCE]     poll and display solution, optionally receiving\n"
         << "                                       corrections on the given iodrivers_base-compatible URI\n"
@@ -331,7 +334,15 @@ int main(int argc, char** argv)
     driver.setReadTimeout(base::Time::fromMilliseconds(100));
     driver.setWriteTimeout(base::Time::fromMilliseconds(100));
 
-    if (cmd == "enable-port") {
+    if (cmd == "cfg-reset") {
+        driver.openURI(uri);
+        driver.resetConfigurationToDefaults();
+    }
+    else if (cmd == "cfg-save") {
+        driver.openURI(uri);
+        driver.saveConfiguration();
+    }
+    else if (cmd == "enable-port") {
         if (argc != 5) {
             usage();
             return 1;
