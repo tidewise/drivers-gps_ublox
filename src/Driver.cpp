@@ -198,6 +198,52 @@ void Driver::setPortEnabled(DevicePort port, bool state, bool persist) {
     setConfigKeyValue(cfg::getPortControlKey(port), state, persist);
 }
 
+void Driver::saveConfiguration() {
+    Frame frame = {
+        .msg_class = 0x06,
+        .msg_id    = 0x09
+    };
+    frame.payload.resize(12, 0);
+    frame.payload[0] = 0;
+    frame.payload[4] = 1;
+    frame.payload[8] = 0;
+    vector<uint8_t> packet = frame.toPacket();
+    writePacket(&packet[0], packet.size());
+    waitForAck(0x06, 0x09);
+}
+
+void Driver::resetConfigurationToDefaults() {
+    Frame frame = {
+        .msg_class = 0x06,
+        .msg_id    = 0x09
+    };
+    frame.payload.resize(12, 0);
+    frame.payload[0] = 1;
+    frame.payload[4] = 0;
+    frame.payload[8] = 1;
+    vector<uint8_t> packet = frame.toPacket();
+    writePacket(&packet[0], packet.size());
+    waitForAck(0x06, 0x09);
+}
+
+void Driver::setUARTBaudrate(DevicePort port, uint32_t rate, bool persist) {
+    cfg::ConfigKeyId key;
+    switch(port) {
+        case PORT_UART1:
+            key = cfg::UART1_BAUDRATE;
+            break;
+        case PORT_UART2:
+            key = cfg::UART2_BAUDRATE;
+            break;
+        default:
+            throw std::invalid_argument(
+                "setUARTBaudrate given a port that is not a UART"
+            );
+    }
+
+    setConfigKeyValue(key, rate, persist);
+}
+
 void Driver::setOutputRate(DevicePort port, MessageOutputType msg, uint8_t rate, bool persist) {
     setConfigKeyValue(cfg::getOutputRateKey(port, msg), rate, persist);
 }

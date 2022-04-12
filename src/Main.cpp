@@ -57,43 +57,29 @@ int usage()
         << "gps_ublox_ctl URI [COMMAND] [ARGS]\n"
         << "  URI        a valid iodrivers_base URI, e.g. serial:///dev/ttyACM0:38400\n"
         << "\n"
+        << "Below:\n"
+        << "  PORT is one of i2c, spi, uart1, uart2 or usb\n"
+        << "  PROTOCOL is one of ubx, nmea, rtcm3x\n"
+        << "\n"
         << "Known commands:\n"
         << "  enable-input PORT PROTOCOL on|off    enable input protocol on a given port\n"
         << "  enable-output PORT PROTOCOL on|off   enable output protocol on a given port\n"
+        << "  cfg-reset                            reset configuration to factory defaults\n"
+        << "                                       It does not save the reset configuration\n"
+        << "  cfg-save                             save configuration to non-volatile memory\n"
+        << "  cfg-uart PORT BAUDRATE               configure a UART port\n"
         << "  enable-port PORT ENABLED             enable communication on a given port\n"
-        << "    where PORT is one of i2c spi uart1 uart2 usb and\n"
-        << "          PROTOCOL is one of ubx nmea rtcm3x and\n"
-        << "  poll-solution [CORR_SOURCE]          poll and display solution, optionally receiving\n"
+        << "  poll-solution PORT [CORR_SOURCE]     poll and display solution, optionally receiving\n"
         << "                                       corrections on the given iodrivers_base-compatible URI\n"
-        << "  poll-relposned CORR_SOURCE [--monitor-rtcm]\n"
+        << "  poll-relposned PORT CORR_SOURCE [--monitor-rtcm]\n"
         << "     read and display position relative to a RTK base station (in static or\n"
         << "     moving base mode). With --monitor-rtcm, show received RTCM messages (for\n"
         << "     debugging of the transmission)\n"
-        << "  reference-station TARGET             configure itself as a RTK reference\n"
+        << "  reference-station PORT TARGET        configure itself as a RTK reference\n"
         << "                                       station, forward RTCM messages to TARGET\n"
         << flush;
 
     return 0;
-}
-
-template <typename T>
-void printKeys(const map<string, T> &keyMap) {
-    for (const auto &port : keyMap) {
-        cout << " " << port.first;
-    }
-    cout << endl;
-}
-
-void printPorts()
-{
-    cout << "Valid ports:";
-    printKeys(PORT_S_TO_E);
-}
-
-void printProtocols()
-{
-    cout << "Valid protocols:";
-    printKeys(PROTOCOL_S_TO_E);
 }
 
 struct PollCallbacks : Driver::PollCallbacks {
@@ -270,16 +256,16 @@ struct PollCallbacks : Driver::PollCallbacks {
     }
 };
 
-void setDefaults(Driver& driver) {
-    driver.setPortProtocol(PORT_USB, DIRECTION_INPUT, PROTOCOL_UBX, true, false);
-    driver.setPortProtocol(PORT_USB, DIRECTION_INPUT, PROTOCOL_RTCM3X, true, false);
-    driver.setPortProtocol(PORT_USB, DIRECTION_OUTPUT, PROTOCOL_UBX, true, false);
-    driver.setPortProtocol(PORT_USB, DIRECTION_OUTPUT, PROTOCOL_RTCM3X, false, false);
-    driver.setPortProtocol(PORT_USB, DIRECTION_OUTPUT, PROTOCOL_NMEA, false, false);
-    driver.setOutputRate(PORT_USB, MSGOUT_NAV_PVT, 0, false);
-    driver.setOutputRate(PORT_USB, MSGOUT_NAV_RELPOSNED, 0, false);
-    driver.setOutputRate(PORT_USB, MSGOUT_NAV_SAT, 0, false);
-    driver.setOutputRate(PORT_USB, MSGOUT_RXM_RTCM, 0, false);
+void setDefaults(DevicePort port, Driver& driver, bool rtcm_in) {
+    driver.setPortProtocol(port, DIRECTION_INPUT, PROTOCOL_UBX, true, false);
+    driver.setPortProtocol(port, DIRECTION_INPUT, PROTOCOL_RTCM3X, rtcm_in, false);
+    driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_UBX, true, false);
+    driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_RTCM3X, false, false);
+    driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_NMEA, false, false);
+    driver.setOutputRate(port, MSGOUT_NAV_PVT, 0, false);
+    driver.setOutputRate(port, MSGOUT_NAV_RELPOSNED, 0, false);
+    driver.setOutputRate(port, MSGOUT_NAV_SAT, 0, false);
+    driver.setOutputRate(port, MSGOUT_RXM_RTCM, 0, false);
     driver.setReadTimeout(base::Time::fromMilliseconds(2000));
 }
 
@@ -317,6 +303,24 @@ void poll(Driver& driver, RTCMForwarder* rtcm_in, RTCMForwarder* rtcm_out) {
     }
 }
 
+DeviceProtocol protocolFromString(string const& arg) {
+    try {
+        return PROTOCOL_S_TO_E.at(arg);
+    }
+    catch(std::out_of_range&) {
+        throw std::invalid_argument(arg + " is not a valid protocol name");
+    }
+}
+
+DevicePort portFromString(string const& arg) {
+    try {
+        return PORT_S_TO_E.at(arg);
+    }
+    catch(std::out_of_range&) {
+        throw std::invalid_argument(arg + " is not a valid port name");
+    }
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 3) {
@@ -331,18 +335,21 @@ int main(int argc, char** argv)
     driver.setReadTimeout(base::Time::fromMilliseconds(100));
     driver.setWriteTimeout(base::Time::fromMilliseconds(100));
 
-    if (cmd == "enable-port") {
-        if (argc == 3) {
-            printPorts();
-            return 0;
-        }
-        else if (argc != 5) {
-            cerr << "enable-port expects exactly two more parameters, ";
-            cerr << "PORT and ENABLED" << endl;
+    if (cmd == "cfg-reset") {
+        driver.openURI(uri);
+        driver.resetConfigurationToDefaults();
+    }
+    else if (cmd == "cfg-save") {
+        driver.openURI(uri);
+        driver.saveConfiguration();
+    }
+    else if (cmd == "enable-port") {
+        if (argc != 5) {
+            usage();
             return 1;
         }
 
-        string port = argv[3];
+        DevicePort port = portFromString(argv[3]);
         string enabled_s = argv[4];
         if (enabled_s != "on" && enabled_s != "off") {
             cerr << "ENABLED parameter must be 'on' or 'off'" << endl;
@@ -350,27 +357,29 @@ int main(int argc, char** argv)
         }
         bool enable = enabled_s == "on";
 
-        if (PORT_S_TO_E.count(port)) {
-            driver.openURI(uri);
-            driver.setPortEnabled(PORT_S_TO_E.at(port), enable);
-        } else {
-            printPorts();
+        driver.openURI(uri);
+        driver.setPortEnabled(port, enable);
+    }
+    else if (cmd == "cfg-uart") {
+        if (argc != 5) {
+            usage();
             return 1;
         }
+
+        DevicePort port = portFromString(argv[3]);
+        uint32_t rate = std::atoi(argv[4]);
+
+        driver.openURI(uri);
+        driver.setUARTBaudrate(port, rate, false);
     } else if ((cmd == "enable-input") || (cmd == "enable-output")) {
         bool input = cmd == "enable-input";
 
-        if (argc == 3) {
-            printProtocols();
-            return 0;
-        }
-        else if (argc != 6) {
-            cerr << cmd << " expects exactly three more parameters, "
-                 << "PORT, PROTOCOL and ENABLED" << endl;
+        if (argc != 6) {
+            usage();
             return 1;
         }
 
-        string port = argv[3];
+        auto port = portFromString(argv[3]);
         string protocol = argv[4];
         string enabled_s = argv[5];
         if (enabled_s != "on" && enabled_s != "off") {
@@ -379,90 +388,86 @@ int main(int argc, char** argv)
         }
         bool enable = enabled_s == "on";
 
-        if (!PORT_S_TO_E.count(port)) {
-            printPorts();
-            return 1;
-        }
-        if (!PROTOCOL_S_TO_E.count(protocol)) {
-            printProtocols();
-            return 1;
-        }
         driver.openURI(uri);
-        driver.setPortProtocol(PORT_S_TO_E.at(port),
-                               input ? DIRECTION_INPUT : DIRECTION_OUTPUT,
-                               PROTOCOL_S_TO_E.at(protocol),
-                               enable);
+        driver.setPortProtocol(
+            port, input ? DIRECTION_INPUT : DIRECTION_OUTPUT,
+            protocolFromString(protocol), enable
+        );
     } else if (cmd == "poll-solution") {
         string rtk_source;
         RTCMForwarder rtcm_in;
 
-        if (argc > 4) {
+        if (argc == 5) {
+            rtk_source = argv[4];
+            rtcm_in.openURI(rtk_source);
+        }
+        else if (argc != 4) {
             usage();
             return 1;
         }
-        else if (argc == 4) {
-            rtk_source = argv[3];
-            rtcm_in.openURI(rtk_source);
-        }
+
+        auto port = portFromString(argv[3]);
 
         driver.openURI(uri);
-        setDefaults(driver);
-        driver.setOutputRate(PORT_USB, MSGOUT_NAV_PVT, 1, false);
-        driver.setOutputRate(PORT_USB, MSGOUT_NAV_SAT, 5, false);
+        setDefaults(port, driver, !rtk_source.empty());
+        driver.setOutputRate(port, MSGOUT_NAV_PVT, 1, false);
+        driver.setOutputRate(port, MSGOUT_NAV_SAT, 5, false);
         driver.setReadTimeout(base::Time::fromSeconds(2));
 
         PollCallbacks::pvtHeader(cout);
         poll(driver, (rtcm_in.isValid() ? &rtcm_in : nullptr), nullptr);
     } else if (cmd == "poll-relposned") {
         bool monitor_rtcm = false;
-        if (argc < 4 || argc > 5) {
+        if (argc < 5 || argc > 6) {
             usage();
             return 1;
         }
-        else if (argc == 5) {
-            if (argv[4] != string("--monitor-rtcm")) {
+        else if (argc == 6) {
+            if (argv[5] != string("--monitor-rtcm")) {
                 usage();
                 return 1;
             }
             monitor_rtcm = true;
         }
 
-        string rtk_source = argv[3];
+        auto port = portFromString(argv[3]);
+        string rtk_source = argv[4];
         RTCMForwarder rtcm_in;
         rtcm_in.openURI(rtk_source);
 
         driver.openURI(uri);
-        setDefaults(driver);
-        driver.setOutputRate(PORT_USB, MSGOUT_NAV_RELPOSNED, 1, false);
-        driver.setOutputRate(PORT_USB, MSGOUT_NAV_SAT, 5, false);
+        setDefaults(port, driver, true);
+        driver.setOutputRate(port, MSGOUT_NAV_RELPOSNED, 1, false);
+        driver.setOutputRate(port, MSGOUT_NAV_SAT, 5, false);
         if (monitor_rtcm) {
-            driver.setOutputRate(PORT_USB, MSGOUT_RXM_RTCM, 1, false);
+            driver.setOutputRate(port, MSGOUT_RXM_RTCM, 1, false);
         }
         driver.setReadTimeout(base::Time::fromMilliseconds(2000));
 
         PollCallbacks::relposnedHeader(cout);
         poll(driver, &rtcm_in, nullptr);
     } else if (cmd == "reference-station") {
-        if (argc != 4) {
+        if (argc != 5) {
             usage();
             return 1;
         }
 
-        string target = argv[3];
+        auto port = portFromString(argv[3]);
+        string target = argv[4];
         RTCMForwarder rtcm_out;
         rtcm_out.openURI(target);
 
         driver.openURI(uri);
-        setDefaults(driver);
-        driver.setPortProtocol(PORT_USB, DIRECTION_OUTPUT, PROTOCOL_RTCM3X, true, false);
-        driver.setOutputRate(PORT_USB, MSGOUT_NAV_PVT, 1, false);
-        driver.setOutputRate(PORT_USB, MSGOUT_NAV_SAT, 5, false);
-        driver.setRTCMOutputRate(PORT_USB, 1074, 1, false);
-        driver.setRTCMOutputRate(PORT_USB, 1084, 1, false);
-        driver.setRTCMOutputRate(PORT_USB, 1094, 1, false);
-        driver.setRTCMOutputRate(PORT_USB, 1124, 1, false);
-        driver.setRTCMOutputRate(PORT_USB, 1230, 1, false);
-        driver.setRTCMOutputRate(PORT_USB, 4072, 1, false);
+        setDefaults(port, driver, false);
+        driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_RTCM3X, true, false);
+        driver.setOutputRate(port, MSGOUT_NAV_PVT, 1, false);
+        driver.setOutputRate(port, MSGOUT_NAV_SAT, 5, false);
+        driver.setRTCMOutputRate(port, 1074, 1, false);
+        driver.setRTCMOutputRate(port, 1084, 1, false);
+        driver.setRTCMOutputRate(port, 1094, 1, false);
+        driver.setRTCMOutputRate(port, 1124, 1, false);
+        driver.setRTCMOutputRate(port, 1230, 1, false);
+        driver.setRTCMOutputRate(port, 4072, 1, false);
         driver.setReadTimeout(base::Time::fromSeconds(2));
 
         PollCallbacks::pvtHeader(cout);
