@@ -77,6 +77,10 @@ namespace gps_ublox
              */
             void saveConfiguration();
 
+            /** Reset the receiver
+             */
+            void reset();
+
             /** Reset configuration to defaults
              */
             void resetConfigurationToDefaults();

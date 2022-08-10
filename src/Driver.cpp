@@ -212,6 +212,18 @@ void Driver::saveConfiguration() {
     waitForAck(0x06, 0x09);
 }
 
+void Driver::reset() {
+    Frame frame = {
+        .msg_class = 0x06,
+        .msg_id    = 0x04
+    };
+    frame.payload.resize(4, 0);
+    frame.payload[0] = 1;
+    frame.payload[2] = 2;
+    vector<uint8_t> packet = frame.toPacket();
+    writePacket(&packet[0], packet.size());
+}
+
 void Driver::resetConfigurationToDefaults() {
     Frame frame = {
         .msg_class = 0x06,

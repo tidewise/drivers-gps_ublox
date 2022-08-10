@@ -335,7 +335,11 @@ int main(int argc, char** argv)
     driver.setReadTimeout(base::Time::fromMilliseconds(100));
     driver.setWriteTimeout(base::Time::fromMilliseconds(100));
 
-    if (cmd == "cfg-reset") {
+    if (cmd == "reset") {
+        driver.openURI(uri);
+        driver.reset();
+    }
+    else if (cmd == "cfg-reset") {
         driver.openURI(uri);
         driver.resetConfigurationToDefaults();
     }
