@@ -332,8 +332,8 @@ int main(int argc, char** argv)
     string cmd(argv[2]);
 
     Driver driver;
-    driver.setReadTimeout(base::Time::fromMilliseconds(100));
-    driver.setWriteTimeout(base::Time::fromMilliseconds(100));
+    driver.setReadTimeout(base::Time::fromMilliseconds(5000));
+    driver.setWriteTimeout(base::Time::fromMilliseconds(5000));
 
     if (cmd == "reset") {
         driver.openURI(uri);
