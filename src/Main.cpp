@@ -77,6 +77,13 @@ int usage()
         << "     debugging of the transmission)\n"
         << "  reference-station PORT TARGET        configure itself as a RTK reference\n"
         << "                                       station, forward RTCM messages to TARGET\n"
+           "TARGET\n"
+        << "  chrony-configure PORT\n"
+        << "     permanently configure the device to output the UBLOX time message\n"
+        << "     on PORT that is needed for the chrony subcommand\n"
+        << "  chrony SOCKET\n"
+        << "     read the UBX TimeUTC message from UBLOX_DEVICE and forward \n"
+        << "     to chrony via the given socket\n"
         << flush;
 
     return 0;
@@ -256,6 +263,21 @@ struct PollCallbacks : Driver::PollCallbacks {
     }
 };
 
+class RawIODriver : public iodrivers_base::Driver {
+    static constexpr int BUFFER_SIZE = 32768;
+
+    int extractPacket(uint8_t const* buffer, size_t buffer_size) const
+    {
+        return 0;
+    }
+
+public:
+    RawIODriver()
+        : Driver(BUFFER_SIZE)
+    {
+    }
+};
+
 void setDefaults(DevicePort port, Driver& driver, bool rtcm_in) {
     driver.setPortProtocol(port, DIRECTION_INPUT, PROTOCOL_UBX, true, false);
     driver.setPortProtocol(port, DIRECTION_INPUT, PROTOCOL_RTCM3X, rtcm_in, false);
@@ -320,6 +342,55 @@ DevicePort portFromString(string const& arg) {
         throw std::invalid_argument(arg + " is not a valid port name");
     }
 }
+
+#define CHRONY_SOCK_MAGIC 0x534f434b
+
+struct ChronySocketSample {
+  /* Time of the measurement (system time) */
+  struct timeval tv;
+
+  /* Offset between the true time and the system time (in seconds)
+   *
+   * Seems to be sys + offset = true
+   * https://github.com/mlichvar/chrony/blob/master/refclock_sock.c#L135
+   */
+  double offset;
+
+  /* Non-zero if the sample is from a PPS signal, i.e. another source
+     is needed to obtain seconds */
+  int pulse;
+
+  /* 0 - normal, 1 - insert leap second, 2 - delete leap second */
+  int leap;
+
+  /* Padding, ignored */
+  int _pad;
+
+  /* Protocol identifier (0x534f434b) */
+  int magic;
+};
+
+struct ChronyCallbacks : Driver::PollCallbacks {
+    RawIODriver m_chrony;
+
+    ChronyCallbacks(RawIODriver& chrony)
+        : m_chrony(chrony) {}
+
+    void timeUTC(TimeUTC const& data) {
+        auto now = base::Time::now();
+
+        ChronySocketSample sample;
+        sample.tv.tv_sec = now.toMicroseconds() / 1000000ULL;
+        sample.tv.tv_usec = now.toMicroseconds() - (sample.tv.tv_usec * 1000000ULL);
+        sample.offset = (data.utc - now).toSeconds();
+        sample.pulse = 0;
+        sample.leap = 0;
+        sample._pad = 0;
+        sample.magic = CHRONY_SOCK_MAGIC;
+
+        m_chrony.writePacket(reinterpret_cast<uint8_t const*>(&sample), sizeof(sample));
+    }
+};
 
 int main(int argc, char** argv)
 {
@@ -477,7 +548,35 @@ int main(int argc, char** argv)
 
         PollCallbacks::pvtHeader(cout);
         poll(driver, nullptr, &rtcm_out);
-    } else {
+    }
+    else if (cmd == "chrony-configure") {
+        if (argc != 4) {
+            usage();
+            return 1;
+        }
+
+        auto port = portFromString(argv[3]);
+        driver.openURI(uri);
+        driver.setOutputRate(port, MSGOUT_NAV_TIMEUTC, 1);
+        driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_UBX, true, true);
+    }
+    else if (cmd == "chrony") {
+        if (argc != 4) {
+            usage();
+            return 1;
+        }
+
+        string chrony_uri = argv[3];
+        RawIODriver chrony_driver;
+        chrony_driver.openURI(chrony_uri);
+
+        ChronyCallbacks callbacks(chrony_driver);
+        driver.openURI(uri);
+        while (true) {
+            driver.poll(callbacks);
+        }
+    }
+    else {
         cerr << "unexpected command " << cmd << endl;
         return usage();
     }
