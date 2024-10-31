@@ -466,6 +466,38 @@ RTCMReceivedMessage UBX::parseRTCMReceivedMessage(const std::vector<uint8_t> &pa
     return msg;
 }
 
+TimeUTC UBX::parseTimeUTC(const std::vector<uint8_t> &payload) {
+    if (payload.size() < 20) {
+        throw invalid_argument(
+            "payload size smaller than 20, cannot be a UBX-NAV-TIMEUTC"
+        );
+    }
+
+    TimeUTC result;
+    result.timestamp = base::Time::now();
+    uint8_t validity = fromLittleEndian<uint8_t>(&payload[19]);
+    result.validity = validity & 0b111;
+
+    int32_t nanoseconds = fromLittleEndian<int32_t>(&payload[8]); // in nanoseconds
+
+    tm utctm;
+    memset(&utctm, 0, sizeof(utctm));
+    utctm.tm_year = fromLittleEndian<uint16_t>(&payload[12]) - 1900;
+    utctm.tm_mon = fromLittleEndian<uint8_t>(&payload[14]) - 1;
+    utctm.tm_mday = fromLittleEndian<uint8_t>(&payload[15]);
+    utctm.tm_hour = fromLittleEndian<uint8_t>(&payload[16]);
+    utctm.tm_min = fromLittleEndian<uint8_t>(&payload[17]);
+    utctm.tm_sec = fromLittleEndian<uint8_t>(&payload[18]);
+    uint64_t secs = timegm(&utctm);
+
+    result.utc = base::Time::fromSeconds(secs, nanoseconds / 1000);
+    result.accuracy_ns = fromLittleEndian<uint32_t>(&payload[4]);
+
+    uint32_t itow = fromLittleEndian<uint32_t>(&payload[0]);
+    result.gps_time_of_week = base::Time::fromMilliseconds(itow);
+    return result;
+}
+
 namespace gps_ublox {
 namespace UBX {
 

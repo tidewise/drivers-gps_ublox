@@ -485,3 +485,26 @@ TEST_F(UBXTest, it_encodes_the_4072_message_with_its_subtype) {
     ASSERT_EQ(9, data.flags);
     ASSERT_EQ(40721, data.message_type);
 }
+
+TEST_F(UBXTest, it_parses_a_TIMEUTC_message) {
+    vector<uint8_t> payload;
+    toLittleEndian<uint32_t>(payload, 2); // itow
+    toLittleEndian<uint32_t>(payload, 9); // accuracy
+    toLittleEndian<int32_t>(payload, 100000); // fraction of second
+    toLittleEndian<uint16_t>(payload, 2001); // year
+    toLittleEndian<uint8_t>(payload, 8); // month, 1-based
+    toLittleEndian<uint8_t>(payload, 9); // day
+    toLittleEndian<uint8_t>(payload, 10); // hour
+    toLittleEndian<uint8_t>(payload, 11); // minute
+    toLittleEndian<uint8_t>(payload, 12); // seconds
+    toLittleEndian<uint8_t>(payload, 0b10111); // all fields valid
+
+    auto data = UBX::parseTimeUTC(payload);
+
+    ASSERT_EQ(2, data.gps_time_of_week.toMilliseconds());
+    ASSERT_EQ(0b111, data.validity);
+    ASSERT_EQ(9, data.accuracy_ns);
+
+    uint64_t time_usec = 997351872000100;
+    ASSERT_EQ(time_usec, data.utc.toMicroseconds());
+}

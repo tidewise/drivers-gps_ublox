@@ -441,6 +441,7 @@ int main(int argc, char** argv)
 
         driver.openURI(uri);
         setDefaults(port, driver, true);
+        driver.setOutputRate(port, MSGOUT_NAV_PVT, 1, false);
         driver.setOutputRate(port, MSGOUT_NAV_RELPOSNED, 1, false);
         driver.setOutputRate(port, MSGOUT_NAV_SAT, 5, false);
         if (monitor_rtcm) {

@@ -15,6 +15,7 @@
 #include <gps_ublox/RTCMReceivedMessage.hpp>
 #include <gps_ublox/SignalInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
+#include <gps_ublox/TimeUTC.hpp>
 
 namespace gps_ublox
 {
@@ -54,6 +55,7 @@ namespace gps_ublox
             MSG_ID_VER = 0x04,
             MSG_ID_PVT = 0x07,
             MSG_ID_RELPOSNED = 0x3c,
+            MSG_ID_TIMEUTC = 0x21,
             MSG_ID_RF = 0x38,
             MSG_ID_SIG = 0x43,
             MSG_ID_SAT = 0x35,
@@ -132,6 +134,11 @@ namespace gps_ublox
          * Parses a UBX-MON-COMM payload
          */
         CommsInfo parseCommsInfo(const std::vector<uint8_t> &payload);
+
+        /**
+         * Parses a UBX-NAV-TIMEUTC payload
+         */
+        TimeUTC parseTimeUTC(const std::vector<uint8_t> &payload);
 
         /** Implements iodrivers_base's extractPacket protocol
          *
