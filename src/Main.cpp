@@ -81,6 +81,8 @@ int usage()
         << "  chrony-configure PORT\n"
         << "     permanently configure the device to output the UBLOX time message\n"
         << "     on PORT that is needed for the chrony subcommand\n"
+        << "  time PORT\n"
+        << "     display time-related information based on the TimeUTC message\n"
         << "  chrony SOCKET\n"
         << "     read the UBX TimeUTC message from UBLOX_DEVICE and forward \n"
         << "     to chrony via the given socket\n"
@@ -173,6 +175,38 @@ struct PollCallbacks : Driver::PollCallbacks {
             << setw(4) << satsWithCorrections << " "
             << setw(4) << satsWithPseudoRange << " "
             << setw(4) << satsWithCarrierRange << "\n";
+    }
+
+    static void timeutcHeader(std::ostream& out) {
+        out
+            << left
+            << setw(18) << "Systime" << " "
+            << setw(18) << "UTC" << " "
+            << setw(9) << "Latency (sys2utc)" << " "
+            << setw(20) << "Validity" << "\n";
+    }
+
+
+    void timeUTC(TimeUTC const& time) override {
+        std::cout
+            << time.timestamp << " "
+            << time.utc << " "
+            << setw(9) << setprecision(6) << fixed
+            << (time.timestamp - time.utc).toSeconds();
+
+        char sep = ' ';
+        if (time.validity & TimeUTC::TIME_VALID_UTC) {
+            cout << sep << "UTC";
+            sep = '|';
+        }
+        if (time.validity & TimeUTC::TIME_VALID_TIME_OF_WEEK) {
+            cout << sep << "ITOW";
+            sep = '|';
+        }
+        if (time.validity & TimeUTC::TIME_VALID_WEEK_NUMBER) {
+            cout << sep << "WEEK_NUMBER";
+        }
+        cout << "\n";
     }
 
     void rtcm(uint8_t const* buffer, size_t size) override {
@@ -548,6 +582,21 @@ int main(int argc, char** argv)
 
         PollCallbacks::pvtHeader(cout);
         poll(driver, nullptr, &rtcm_out);
+    }
+    else if (cmd == "time") {
+        if (argc != 4) {
+            usage();
+            return 1;
+        }
+
+        auto port = portFromString(argv[3]);
+        driver.openURI(uri);
+        setDefaults(port, driver, true);
+        driver.setOutputRate(port, MSGOUT_NAV_TIMEUTC, 1, false);
+        driver.setReadTimeout(base::Time::fromMilliseconds(2000));
+
+        PollCallbacks::timeutcHeader(cout);
+        poll(driver, nullptr, nullptr);
     }
     else if (cmd == "chrony-configure") {
         if (argc != 4) {
