@@ -413,6 +413,10 @@ struct ChronyCallbacks : Driver::PollCallbacks {
     void timeUTC(TimeUTC const& data) {
         auto now = base::Time::now();
 
+        if (data.validity != TimeUTC::TIME_VALID) {
+            return;
+        }
+
         ChronySocketSample sample;
         sample.tv.tv_sec = now.toMicroseconds() / 1000000ULL;
         sample.tv.tv_usec = now.toMicroseconds() - (sample.tv.tv_usec * 1000000ULL);

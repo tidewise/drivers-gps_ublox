@@ -6,9 +6,10 @@
 namespace gps_ublox {
     struct TimeUTC {
         enum ValidityFlags {
-            TIME_VALID_TIME_OF_WEEK = 1,
-            TIME_VALID_WEEK_NUMBER = 2,
-            TIME_VALID_UTC = 4
+            TIME_VALID_TIME_OF_WEEK = 0b001,
+            TIME_VALID_WEEK_NUMBER = 0b010,
+            TIME_VALID_UTC = 0b100,
+            TIME_VALID = 0b111
         };
 
         /** The time at which the message was parsed */
