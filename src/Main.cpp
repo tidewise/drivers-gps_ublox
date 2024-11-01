@@ -414,6 +414,7 @@ struct ChronyCallbacks : Driver::PollCallbacks {
         auto now = base::Time::now();
 
         if (data.validity != TimeUTC::TIME_VALID) {
+            std::cout << "INV" << now << " " << data.utc << "\n";
             return;
         }
 
@@ -426,6 +427,7 @@ struct ChronyCallbacks : Driver::PollCallbacks {
         sample._pad = 0;
         sample.magic = CHRONY_SOCK_MAGIC;
 
+        std::cout << "VAL" << now << " " << data.utc << " " << sample.offset << "\n";
         m_chrony.writePacket(reinterpret_cast<uint8_t const*>(&sample), sizeof(sample));
     }
 };
