@@ -407,28 +407,63 @@ struct ChronySocketSample {
 struct ChronyCallbacks : Driver::PollCallbacks {
     RawIODriver m_chrony;
 
+    TimeUTC m_time_utc;
+    std::array<base::Time, 2> m_timing_pulses;
+
     ChronyCallbacks(RawIODriver& chrony)
         : m_chrony(chrony) {}
 
     void timeUTC(TimeUTC const& data) {
-        auto now = base::Time::now();
-
         if (data.validity != TimeUTC::TIME_VALID) {
-            std::cout << "INV" << now << " " << data.utc << "\n";
+            std::cout << "INV " << data.timestamp << " " << data.utc << "\n";
+            m_time_utc.timestamp = base::Time();
             return;
         }
 
+        m_time_utc = data;
+
+        if (hasSampleReady()) {
+            sendSample();
+            m_time_utc.gps_time_of_week = base::Time();
+        }
+    }
+
+    bool hasSampleReady() const {
+        if (m_time_utc.gps_time_of_week.isNull()) {
+            return false;
+        }
+
+        return m_time_utc.gps_time_of_week == m_timing_pulses[0] ||
+               m_time_utc.gps_time_of_week == m_timing_pulses[1];
+    }
+
+    void sendSample() {
+        auto systime = m_time_utc.timestamp;
+        auto utctime = m_time_utc.utc;
+
         ChronySocketSample sample;
-        sample.tv.tv_sec = now.toMicroseconds() / 1000000ULL;
-        sample.tv.tv_usec = now.toMicroseconds() - (sample.tv.tv_usec * 1000000ULL);
-        sample.offset = (data.utc - now).toSeconds();
+        sample.tv.tv_sec = systime.toMicroseconds() / 1000000ULL;
+        sample.tv.tv_usec = systime.toMicroseconds() - (sample.tv.tv_usec * 1000000ULL);
+        sample.offset = (utctime - systime).toSeconds();
         sample.pulse = 0;
         sample.leap = 0;
         sample._pad = 0;
         sample.magic = CHRONY_SOCK_MAGIC;
 
-        std::cout << "VAL" << now << " " << data.utc << " " << sample.offset << "\n";
+        std::cout << "VAL " << systime << " " << utctime << " " << sample.offset << "\n";
         m_chrony.writePacket(reinterpret_cast<uint8_t const*>(&sample), sizeof(sample));
+    }
+
+    TimingPulseData m_last_timing;
+
+    void timingPulseData(TimingPulseData const& data) {
+        m_timing_pulses[0] = m_timing_pulses[1];
+        m_timing_pulses[1] = data.time_of_week;
+
+        if (hasSampleReady()) {
+            sendSample();
+            m_time_utc.gps_time_of_week = base::Time();
+        }
     }
 };
 
@@ -605,14 +640,22 @@ int main(int argc, char** argv)
         poll(driver, nullptr, nullptr);
     }
     else if (cmd == "chrony-configure") {
-        if (argc != 4) {
+        if (argc != 4 && argc != 5) {
             usage();
             return 1;
         }
 
         auto port = portFromString(argv[3]);
+        base::Time period = base::Time::fromMilliseconds(1000);
+        if (argc == 5) {
+            period = base::Time::fromMicroseconds(stoi(argv[4]));
+        }
+
         driver.openURI(uri);
         driver.setOutputRate(port, MSGOUT_NAV_TIMEUTC, 1);
+        driver.setOutputRate(port, MSGOUT_TIM_TP, 1);
+        driver.setTimePulsePeriod(period);
+        driver.setTimePulseTimeReference(TIME_PULSE_TIME_REFERENCE_GPS);
         driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_UBX, true, true);
     }
     else if (cmd == "chrony") {

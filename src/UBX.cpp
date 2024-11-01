@@ -498,6 +498,27 @@ TimeUTC UBX::parseTimeUTC(const std::vector<uint8_t> &payload) {
     return result;
 }
 
+TimingPulseData UBX::parseTimingPulseData(const std::vector<uint8_t> &payload) {
+    if (payload.size() < 16) {
+        throw invalid_argument(
+            "payload size smaller than 16, cannot be a UBX-TIM-TP"
+        );
+    }
+
+    TimingPulseData result;
+    result.timestamp = base::Time::now();
+    result.time_of_week = base::Time::fromMilliseconds(
+        fromLittleEndian<uint32_t>(&payload[0])
+    );
+    result.submilliseconds = fromLittleEndian<uint32_t>(&payload[4]);
+    result.quantization_error_ns = fromLittleEndian<int32_t>(&payload[8]);
+    result.week_number = fromLittleEndian<uint16_t>(&payload[12]);
+
+    result.flags = fromLittleEndian<uint8_t>(&payload[14]);
+    result.reference_info = fromLittleEndian<uint8_t>(&payload[15]);
+    return result;
+}
+
 namespace gps_ublox {
 namespace UBX {
 

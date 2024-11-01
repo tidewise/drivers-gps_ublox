@@ -126,6 +126,9 @@ void Driver::pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout) {
     else if (frame.msg_class == UBX::MSG_CLASS_NAV && frame.msg_id == UBX::MSG_ID_TIMEUTC) {
         callbacks.timeUTC(UBX::parseTimeUTC(frame.payload));
     }
+    else if (frame.msg_class == UBX::MSG_CLASS_TIM && frame.msg_id == UBX::MSG_ID_TP) {
+        callbacks.timingPulseData(UBX::parseTimingPulseData(frame.payload));
+    }
 }
 
 Frame Driver::waitForPacket(const uint8_t *class_id, const uint8_t *msg_id,
@@ -350,4 +353,16 @@ void Driver::setSpeedThreshold(uint8_t speed, bool persist)
 void Driver::setStaticHoldDistanceThreshold(uint16_t distance, bool persist)
 {
     setConfigKeyValue(cfg::MOT_GNSSDIST_THRS, distance, persist);
+}
+
+void Driver::setTimePulsePeriod(base::Time const& period, bool persist)
+{
+    setConfigKeyValue<uint8_t>(cfg::TP_PULSE_DEF, TIME_PULSE_DEF_PERIOD, persist);
+    setConfigKeyValue<uint32_t>(cfg::TP_PERIOD_TP1, period.toMicroseconds(), persist);
+    setConfigKeyValue<uint32_t>(cfg::TP_PERIOD_LOCK_TP1, period.toMicroseconds(), persist);
+}
+
+void Driver::setTimePulseTimeReference(TimePulseTimeReference reference, bool persist)
+{
+    setConfigKeyValue<uint8_t>(cfg::TP_TIMEGRID_TP1, reference, persist);
 }

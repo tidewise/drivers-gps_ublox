@@ -3,7 +3,7 @@ rock_library(gps_ublox
     HEADERS Driver.hpp UBX.hpp Driver.hpp
       BoardInfo.hpp SignalInfo.hpp RFInfo.hpp PVT.hpp SatelliteInfo.hpp
       cfg.hpp RelPosNED.hpp RTCMReceivedMessage.hpp RTKInfo.hpp CommsInfo.hpp
-      TimeUTC.hpp
+      TimeUTC.hpp TimingPulseData.hpp
     DEPS_PKGCONFIG iodrivers_base base-types gps_base)
 
 rock_executable(gps_ublox_ctl Main.cpp

@@ -16,6 +16,7 @@
 #include <gps_ublox/SignalInfo.hpp>
 #include <gps_ublox/SatelliteInfo.hpp>
 #include <gps_ublox/TimeUTC.hpp>
+#include <gps_ublox/TimingPulseData.hpp>
 
 namespace gps_ublox
 {
@@ -43,7 +44,8 @@ namespace gps_ublox
             MSG_CLASS_CFG = 0x06,
             MSG_CLASS_MON = 0x0A,
             MSG_CLASS_RXM = 0x02,
-            MSG_CLASS_NAV = 0x01
+            MSG_CLASS_NAV = 0x01,
+            MSG_CLASS_TIM = 0x0d
         };
 
         /** The message id enumeration
@@ -60,7 +62,8 @@ namespace gps_ublox
             MSG_ID_SIG = 0x43,
             MSG_ID_SAT = 0x35,
             MSG_ID_RTCM = 0x32,
-            MSG_ID_COMMS = 0x36
+            MSG_ID_COMMS = 0x36,
+            MSG_ID_TP = 0x01
         };
 
         /** The layer where a configuration data is stored
@@ -139,6 +142,11 @@ namespace gps_ublox
          * Parses a UBX-NAV-TIMEUTC payload
          */
         TimeUTC parseTimeUTC(const std::vector<uint8_t> &payload);
+
+        /**
+         * Parses a UBX-TIM-TP payload
+         */
+        TimingPulseData parseTimingPulseData(const std::vector<uint8_t> &payload);
 
         /** Implements iodrivers_base's extractPacket protocol
          *
