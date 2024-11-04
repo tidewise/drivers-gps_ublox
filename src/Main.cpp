@@ -5,6 +5,9 @@
 #include <iomanip>
 #include <poll.h>
 
+#include <chrono>
+#include <thread>
+
 using namespace base;
 using namespace gps_ublox;
 using namespace std;
@@ -83,9 +86,11 @@ int usage()
         << "     on PORT that is needed for the chrony subcommand\n"
         << "  time PORT\n"
         << "     display time-related information based on the TimeUTC message\n"
-        << "  chrony SOCKET\n"
-        << "     read the UBX TimeUTC message from UBLOX_DEVICE and forward \n"
-        << "     to chrony via the given socket\n"
+        << "  chrony SOCKET [DELAY_MS]\n"
+        << "     read the UBX TimeUTC message from UBLOX_DEVICE and forward\n"
+        << "     to chrony via the given socket. DELAY_MS is an optional\n"
+        << "     delay (in ms) that will be added before the sample is sent\n"
+        << "     to chrony, to test chrony's configuration robustness against delays.\n"
         << flush;
 
     return 0;
@@ -409,9 +414,11 @@ struct ChronyCallbacks : Driver::PollCallbacks {
 
     TimeUTC m_time_utc;
     std::array<base::Time, 2> m_timing_pulses;
+    base::Time m_delay;
 
-    ChronyCallbacks(RawIODriver& chrony)
-        : m_chrony(chrony) {}
+    ChronyCallbacks(RawIODriver& chrony, base::Time const& delay)
+        : m_chrony(chrony)
+        , m_delay(delay) {}
 
     void timeUTC(TimeUTC const& data) {
         if (data.validity != TimeUTC::TIME_VALID) {
@@ -450,6 +457,11 @@ struct ChronyCallbacks : Driver::PollCallbacks {
         sample._pad = 0;
         sample.magic = CHRONY_SOCK_MAGIC;
 
+        if (!m_delay.isNull()) {
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(m_delay.toMilliseconds())
+            );
+        }
         std::cout << "VAL " << systime << " " << utctime << " " << sample.offset << "\n";
         m_chrony.writePacket(reinterpret_cast<uint8_t const*>(&sample), sizeof(sample));
     }
@@ -659,16 +671,20 @@ int main(int argc, char** argv)
         driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_UBX, true, true);
     }
     else if (cmd == "chrony") {
-        if (argc != 4) {
+        if (argc != 4 && argc != 5) {
             usage();
             return 1;
         }
 
         string chrony_uri = argv[3];
+        base::Time delay;
+        if (argc == 5) {
+            delay = base::Time::fromMilliseconds(std::stoi(argv[4]));
+        }
         RawIODriver chrony_driver;
         chrony_driver.openURI(chrony_uri);
 
-        ChronyCallbacks callbacks(chrony_driver);
+        ChronyCallbacks callbacks(chrony_driver, delay);
         driver.openURI(uri);
         while (true) {
             driver.poll(callbacks);
