@@ -448,6 +448,13 @@ struct ChronyCallbacks : Driver::PollCallbacks {
         auto systime = m_time_utc.timestamp;
         auto utctime = m_time_utc.utc;
 
+        if (!m_delay.isNull()) {
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(m_delay.toMilliseconds())
+            );
+            systime = systime + m_delay;
+        }
+
         ChronySocketSample sample;
         sample.tv.tv_sec = systime.toMicroseconds() / 1000000ULL;
         sample.tv.tv_usec = systime.toMicroseconds() - (sample.tv.tv_usec * 1000000ULL);
@@ -457,11 +464,6 @@ struct ChronyCallbacks : Driver::PollCallbacks {
         sample._pad = 0;
         sample.magic = CHRONY_SOCK_MAGIC;
 
-        if (!m_delay.isNull()) {
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(m_delay.toMilliseconds())
-            );
-        }
         std::cout << "VAL " << systime << " " << utctime << " " << sample.offset << "\n";
         m_chrony.writePacket(reinterpret_cast<uint8_t const*>(&sample), sizeof(sample));
     }
