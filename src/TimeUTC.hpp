@@ -21,6 +21,9 @@ namespace gps_ublox {
         /** The GPS time of week */
         base::Time gps_time_of_week;
 
+        /** The nanoseconds part of the UTC time */
+        int32_t utc_ns;
+
         /** Time accuracy in nanoseconds */
         uint32_t accuracy_ns = 0;
 

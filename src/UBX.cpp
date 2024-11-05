@@ -491,6 +491,7 @@ TimeUTC UBX::parseTimeUTC(const std::vector<uint8_t> &payload) {
     uint64_t secs = timegm(&utctm);
 
     result.utc = base::Time::fromSeconds(secs, nanoseconds / 1000);
+    result.utc_ns = nanoseconds % 1000;
     result.accuracy_ns = fromLittleEndian<uint32_t>(&payload[4]);
 
     uint32_t itow = fromLittleEndian<uint32_t>(&payload[0]);
@@ -507,10 +508,14 @@ TimingPulseData UBX::parseTimingPulseData(const std::vector<uint8_t> &payload) {
 
     TimingPulseData result;
     result.timestamp = base::Time::now();
-    result.time_of_week = base::Time::fromMilliseconds(
-        fromLittleEndian<uint32_t>(&payload[0])
+    uint32_t time_of_week_ms = fromLittleEndian<uint32_t>(&payload[0]);
+    uint32_t time_of_week_subms = fromLittleEndian<uint32_t>(&payload[4]);
+
+    result.time_of_week = base::Time::fromMicroseconds(
+        static_cast<uint64_t>(time_of_week_ms) * 1000 +
+        time_of_week_subms / 1000
     );
-    result.submilliseconds = fromLittleEndian<uint32_t>(&payload[4]);
+    result.time_of_week_ns = time_of_week_subms % 1000;
     result.quantization_error_ns = fromLittleEndian<int32_t>(&payload[8]);
     result.week_number = fromLittleEndian<uint16_t>(&payload[12]);
 

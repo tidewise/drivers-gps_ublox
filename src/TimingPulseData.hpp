@@ -6,16 +6,20 @@ namespace gps_ublox {
     struct TimingPulseData {
         base::Time timestamp;
 
+        /** The time_of_week with a microseconds precision */
         base::Time time_of_week;
-        uint32_t submilliseconds;
-        int32_t quantization_error_ns;
-        uint32_t week_number;
+        /** The nanosecond part of the time_of_week information */
+        int16_t time_of_week_ns;
 
         /** Validity and RAIM flags, see Ublox documentation */
         uint8_t flags;
 
         /** Validity and RAIM flags, see Ublox documentation */
         uint8_t reference_info;
+
+        int32_t quantization_error_ns;
+
+        uint32_t week_number;
 
         bool isUTC() const {
             return (flags & 1) == 1;
