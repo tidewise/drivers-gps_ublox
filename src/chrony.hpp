@@ -1,0 +1,59 @@
+#ifndef GPS_UBLOX_CHRONY_HPP
+#define GPS_UBLOX_CHRONY_HPP
+
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/timepps.h>
+#include <sys/types.h>
+#include <utility>
+#include <string>
+
+#include <base/Time.hpp>
+#include <iodrivers_base/Driver.hpp>
+
+#include <gps_ublox/TimingPulseData.hpp>
+
+namespace gps_ublox {
+    namespace chrony {
+        /** Representation of a single PPS pulse */
+        struct PPSPulse {
+            base::Time time;
+            int16_t time_ns = 0;
+            pps_seq_t sequence = 0;
+
+            bool valid() const {
+                return !time.isNull();
+            }
+        };
+
+        /** Management of the PPS source */
+        class PPS {
+            pps_handle_t m_handle;
+            int m_fd = -1;
+
+            PPS(pps_handle_t handle, int fd);
+        public:
+            ~PPS();
+            PPS(PPS const&) = delete;
+            PPS(PPS&& other);
+
+            PPSPulse wait();
+
+            static PPS open(std::string const& path);
+        };
+
+        /** Handling of the data channel to Chrony itself */
+        class ChronySocket : public iodrivers_base::Driver {
+            static constexpr int BUFFER_SIZE = 32768;
+
+            int extractPacket(uint8_t const* buffer, size_t buffer_size) const override;
+
+        public:
+            ChronySocket();
+
+            void send(PPSPulse const& pps, TimingPulseData const& pulse_data);
+        };
+    }
+}
+
+#endif

@@ -5,12 +5,12 @@
 #include <iomanip>
 #include <poll.h>
 
-#include <chrono>
-#include <thread>
+#include <gps_ublox/chrony.hpp>
 
 using namespace base;
 using namespace gps_ublox;
 using namespace std;
+using iodrivers_base::UnixError;
 
 struct RTCMForwarder : public iodrivers_base::Driver {
     int extractPacket(uint8_t const* buffer, size_t size) const {
@@ -86,11 +86,9 @@ int usage()
         << "     on PORT that is needed for the chrony subcommand\n"
         << "  time PORT\n"
         << "     display time-related information based on the TimeUTC message\n"
-        << "  chrony SOCKET [DELAY_MS]\n"
-        << "     read the UBX TimeUTC message from UBLOX_DEVICE and forward\n"
-        << "     to chrony via the given socket. DELAY_MS is an optional\n"
-        << "     delay (in ms) that will be added before the sample is sent\n"
-        << "     to chrony, to test chrony's configuration robustness against delays.\n"
+        << "  chrony SOCKET PPS\n"
+        << "     read the UBX TimeUTC message from UBLOX_DEVICE as well as a source\n"
+        << "     of PPS data and forward time correction information to SOCKET\n"
         << flush;
 
     return 0;
@@ -214,6 +212,16 @@ struct PollCallbacks : Driver::PollCallbacks {
         cout << "\n";
     }
 
+    void timingPulseData(TimingPulseData const& data) override {
+        uint64_t week_time_ms =
+            static_cast<uint64_t>(data.week_number) * 7 * 24 * 3600 * 1000;
+        base::Time week_time =
+            base::Time::fromMilliseconds(315964800000ULL) +
+            base::Time::fromMilliseconds(week_time_ms);
+        base::Time time = week_time + data.time_of_week;
+        std::cout << "Next pulse " << time << "\n";
+    }
+
     void rtcm(uint8_t const* buffer, size_t size) override {
         if (!rtcm_out) {
             return;
@@ -327,6 +335,8 @@ void setDefaults(DevicePort port, Driver& driver, bool rtcm_in) {
     driver.setOutputRate(port, MSGOUT_NAV_RELPOSNED, 0, false);
     driver.setOutputRate(port, MSGOUT_NAV_SAT, 0, false);
     driver.setOutputRate(port, MSGOUT_RXM_RTCM, 0, false);
+    driver.setOutputRate(port, MSGOUT_NAV_TIMEUTC, 0, false);
+    driver.setOutputRate(port, MSGOUT_TIM_TP, 0, false);
     driver.setReadTimeout(base::Time::fromMilliseconds(2000));
 }
 
@@ -383,103 +393,6 @@ DevicePort portFromString(string const& arg) {
 }
 
 #define CHRONY_SOCK_MAGIC 0x534f434b
-
-struct ChronySocketSample {
-  /* Time of the measurement (system time) */
-  struct timeval tv;
-
-  /* Offset between the true time and the system time (in seconds)
-   *
-   * Seems to be sys + offset = true
-   * https://github.com/mlichvar/chrony/blob/master/refclock_sock.c#L135
-   */
-  double offset;
-
-  /* Non-zero if the sample is from a PPS signal, i.e. another source
-     is needed to obtain seconds */
-  int pulse;
-
-  /* 0 - normal, 1 - insert leap second, 2 - delete leap second */
-  int leap;
-
-  /* Padding, ignored */
-  int _pad;
-
-  /* Protocol identifier (0x534f434b) */
-  int magic;
-};
-
-struct ChronyCallbacks : Driver::PollCallbacks {
-    RawIODriver m_chrony;
-
-    TimeUTC m_time_utc;
-    std::array<base::Time, 2> m_timing_pulses;
-    base::Time m_delay;
-
-    ChronyCallbacks(RawIODriver& chrony, base::Time const& delay)
-        : m_chrony(chrony)
-        , m_delay(delay) {}
-
-    void timeUTC(TimeUTC const& data) {
-        if (data.validity != TimeUTC::TIME_VALID) {
-            std::cout << "INV " << data.timestamp << " " << data.utc << "\n";
-            m_time_utc.timestamp = base::Time();
-            return;
-        }
-
-        m_time_utc = data;
-
-        if (hasSampleReady()) {
-            sendSample();
-            m_time_utc.gps_time_of_week = base::Time();
-        }
-    }
-
-    bool hasSampleReady() const {
-        if (m_time_utc.gps_time_of_week.isNull()) {
-            return false;
-        }
-
-        return m_time_utc.gps_time_of_week == m_timing_pulses[0] ||
-               m_time_utc.gps_time_of_week == m_timing_pulses[1];
-    }
-
-    void sendSample() {
-        auto systime = m_time_utc.timestamp;
-        auto utctime = m_time_utc.utc;
-
-        if (!m_delay.isNull()) {
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(m_delay.toMilliseconds())
-            );
-            systime = systime + m_delay;
-        }
-
-        ChronySocketSample sample;
-        sample.tv.tv_sec = systime.toMicroseconds() / 1000000ULL;
-        sample.tv.tv_usec = systime.toMicroseconds() - (sample.tv.tv_usec * 1000000ULL);
-        sample.offset = (utctime - systime).toSeconds();
-        sample.pulse = 0;
-        sample.leap = 0;
-        sample._pad = 0;
-        sample.magic = CHRONY_SOCK_MAGIC;
-
-        std::cout << "VAL " << systime << " " << utctime << " " << sample.offset << "\n";
-        m_chrony.writePacket(reinterpret_cast<uint8_t const*>(&sample), sizeof(sample));
-    }
-
-    TimingPulseData m_last_timing;
-
-    void timingPulseData(TimingPulseData const& data) {
-        m_timing_pulses[0] = m_timing_pulses[1];
-        m_timing_pulses[1] = data.time_of_week;
-
-        if (hasSampleReady()) {
-            sendSample();
-            m_time_utc.gps_time_of_week = base::Time();
-        }
-    }
-};
 
 int main(int argc, char** argv)
 {
@@ -648,7 +561,9 @@ int main(int argc, char** argv)
         driver.openURI(uri);
         setDefaults(port, driver, true);
         driver.setOutputRate(port, MSGOUT_NAV_TIMEUTC, 1, false);
+        driver.setOutputRate(port, MSGOUT_TIM_TP, 1, false);
         driver.setReadTimeout(base::Time::fromMilliseconds(2000));
+        driver.setTimePulseTimeReference(TIME_PULSE_TIME_REFERENCE_UTC);
 
         PollCallbacks::timeutcHeader(cout);
         poll(driver, nullptr, nullptr);
@@ -666,30 +581,32 @@ int main(int argc, char** argv)
         }
 
         driver.openURI(uri);
-        driver.setOutputRate(port, MSGOUT_NAV_TIMEUTC, 1);
+        setDefaults(port, driver, false);
         driver.setOutputRate(port, MSGOUT_TIM_TP, 1);
         driver.setTimePulsePeriod(period);
-        driver.setTimePulseTimeReference(TIME_PULSE_TIME_REFERENCE_GPS);
-        driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_UBX, true, true);
+        driver.setTimePulseTimeReference(TIME_PULSE_TIME_REFERENCE_UTC);
+        driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_UBX, true);
     }
     else if (cmd == "chrony") {
-        if (argc != 4 && argc != 5) {
+        if (argc != 5) {
             usage();
             return 1;
         }
 
         string chrony_uri = argv[3];
-        base::Time delay;
-        if (argc == 5) {
-            delay = base::Time::fromMilliseconds(std::stoi(argv[4]));
-        }
-        RawIODriver chrony_driver;
-        chrony_driver.openURI(chrony_uri);
+        string pps_path = argv[4];
 
-        ChronyCallbacks callbacks(chrony_driver, delay);
         driver.openURI(uri);
-        while (true) {
-            driver.poll(callbacks);
+
+        chrony::PPS pps = chrony::PPS::open(pps_path);
+        chrony::ChronySocket socket;
+        socket.openURI(chrony_uri);
+
+        driver.setReadTimeout(base::Time::fromSeconds(20));
+        while(true) {
+            auto tp = driver.latestTimingPulseData();
+            auto pulse = pps.wait();
+            socket.send(pulse, tp);
         }
     }
     else {

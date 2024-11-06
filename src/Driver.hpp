@@ -46,9 +46,20 @@ namespace gps_ublox
 
             UBX::Frame pollFrame(uint8_t class_id, uint8_t msg_id);
             UBX::Frame waitForFrame(uint8_t class_id, uint8_t msg_id);
-            UBX::Frame waitForPacket(const uint8_t *class_id = nullptr,
-                                     const uint8_t *msg_id = nullptr,
-                                     const std::vector<uint8_t> *payload = nullptr);
+            UBX::Frame waitForFrame(
+                uint8_t class_id, uint8_t msg_id, base::Time const& timeout
+            );
+            UBX::Frame waitForPacket(
+                const uint8_t *class_id = nullptr,
+                const uint8_t *msg_id = nullptr,
+                const std::vector<uint8_t> *payload = nullptr
+            );
+            UBX::Frame waitForPacket(
+                base::Time const& timeout,
+                const uint8_t *class_id = nullptr,
+                const uint8_t *msg_id = nullptr,
+                const std::vector<uint8_t> *payload = nullptr
+            );
             bool waitForAck(uint8_t class_id, uint8_t msg_id);
             void pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout);
 
@@ -270,6 +281,9 @@ namespace gps_ublox
             /** Reads any frame
              */
             UBX::Frame readFrame();
+
+            /** Read all pending timing pulse data samples and return the last one */
+            TimingPulseData latestTimingPulseData();
 
             /** Read all available frames and dispatch them synchronously
              * to the given callbacks

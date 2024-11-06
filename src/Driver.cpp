@@ -45,6 +45,17 @@ PVT Driver::waitForPVT() {
     return UBX::parsePVT(frame.payload);
 }
 
+TimingPulseData Driver::latestTimingPulseData() {
+    Frame frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP);
+    try {
+        while(true) {
+            waitForFrame(MSG_CLASS_TIM, MSG_ID_TP, base::Time());
+        }
+    }
+    catch(iodrivers_base::TimeoutError&) {}
+    return UBX::parseTimingPulseData(frame.payload);
+}
+
 RelPosNED Driver::waitForRelPosNED() {
     Frame frame = waitForFrame(MSG_CLASS_NAV, MSG_ID_RELPOSNED);
     return UBX::parseRelPosNED(frame.payload);
@@ -131,13 +142,26 @@ void Driver::pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout) {
     }
 }
 
-Frame Driver::waitForPacket(const uint8_t *class_id, const uint8_t *msg_id,
-                            const std::vector<uint8_t> *payload)
+Frame Driver::waitForPacket(
+    const uint8_t *class_id, const uint8_t *msg_id,
+    const std::vector<uint8_t> *payload
+)
 {
-    base::Time deadline = base::Time::now() + getReadTimeout();
-    while (base::Time::now() < deadline) {
-        base::Time remaining = deadline - base::Time::now();
+    return waitForPacket(getReadTimeout(), class_id, msg_id, payload);
+}
+
+Frame Driver::waitForPacket(
+    base::Time const& timeout,
+    const uint8_t *class_id, const uint8_t *msg_id,
+    const std::vector<uint8_t> *payload
+)
+{
+    base::Time now = base::Time::now();
+    base::Time deadline = now + timeout;
+    while(now < deadline) {
+        base::Time remaining = deadline - now;
         int bytes = readPacket(mReadBuffer, BUFFER_SIZE, remaining);
+        now = base::Time::now();
 
         if (gps_base::rtcm3::isPreamble(mReadBuffer, bytes)) {
             continue;
@@ -172,9 +196,14 @@ void Driver::writeRTCM(std::vector<uint8_t> const& data) {
     }
 }
 
+Frame Driver::waitForFrame(uint8_t class_id, uint8_t msg_id, base::Time const& timeout)
+{
+    return waitForPacket(timeout, &class_id, &msg_id);
+}
+
 Frame Driver::waitForFrame(uint8_t class_id, uint8_t msg_id)
 {
-    return waitForPacket(&class_id, &msg_id);
+    return waitForFrame(class_id, msg_id, getReadTimeout());
 }
 
 bool Driver::waitForAck(uint8_t class_id, uint8_t msg_id)

@@ -1,0 +1,164 @@
+#include <gps_ublox/chrony.hpp>
+
+using namespace gps_ublox;
+using namespace gps_ublox::chrony;
+
+using iodrivers_base::UnixError;
+
+namespace {
+    struct PPSGuard {
+        pps_handle_t m_handle;
+        bool m_released = false;
+
+        PPSGuard(pps_handle_t handle)
+            : m_handle(handle)
+        {
+        }
+        ~PPSGuard()
+        {
+            if (!m_released) {
+                time_pps_destroy(m_handle);
+            }
+        }
+
+        pps_handle_t release()
+        {
+            m_released = true;
+            return m_handle;
+        }
+    };
+}
+
+PPS::PPS(pps_handle_t handle, int fd)
+    : m_handle(handle)
+    , m_fd(fd)
+{
+}
+
+PPS::PPS(PPS&& other)
+    : m_handle(other.m_handle)
+    , m_fd(other.m_fd) {
+    other.m_fd = -1;
+}
+
+PPS::~PPS() {
+    if (m_fd != -1) {
+        time_pps_destroy(m_handle);
+        close(m_fd);
+    }
+}
+
+PPSPulse PPS::wait()
+{
+    timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = 0;
+
+    pps_info_t pps_info;
+    if (time_pps_fetch(m_fd, PPS_TSFMT_TSPEC, &pps_info, &ts) < 0) {
+        throw UnixError("failed to fetch PPS");
+    }
+
+    ts = pps_info.assert_timestamp;
+
+    PPSPulse pulse;
+    pulse.time = base::Time::fromMicroseconds(
+        static_cast<uint64_t>(ts.tv_sec) + static_cast<uint64_t>(ts.tv_nsec / 1000));
+    pulse.time_ns = ts.tv_nsec % 1000;
+    pulse.sequence = pps_info.assert_sequence;
+    return pulse;
+}
+
+PPS PPS::open(std::string const& path)
+{
+    int fd = ::open(path.c_str(), O_RDWR);
+    if (fd < 0) {
+        throw UnixError("could not open PPS device " + path);
+    }
+
+    iodrivers_base::FileGuard guard(fd);
+
+    pps_handle_t handle;
+    if (time_pps_create(fd, &handle) < 0) {
+        throw UnixError("could not create PPS handle for " + path);
+    }
+
+    PPSGuard pps_guard(handle);
+
+    int mode;
+    if (time_pps_getcap(handle, &mode) < 0) {
+        throw UnixError("could not query PPS mode for " + path);
+    }
+    if (!(mode & PPS_CAPTUREASSERT)) {
+        throw std::runtime_error(
+            "pps " + path + " does not support capturing the rising edge");
+    }
+
+    pps_params_t params;
+    if (time_pps_getparams(handle, &params) < 0) {
+        throw UnixError("could not query PPS params for " + path);
+    }
+    params.mode |= PPS_CAPTUREASSERT;
+    params.mode &= ~PPS_CAPTURECLEAR;
+
+    if (time_pps_setparams(handle, &params) < 0) {
+        throw UnixError("could not set PPS params for " + path);
+    }
+
+    return PPS(pps_guard.release(), guard.release());
+}
+
+int ChronySocket::extractPacket(uint8_t const* buffer, size_t buffer_size) const
+{
+    return 0;
+}
+
+ChronySocket::ChronySocket()
+    : Driver(BUFFER_SIZE)
+{
+}
+
+#define CHRONY_SOCK_MAGIC 0x534f434b
+
+/** One sample as expected by chrony */
+struct SocketSample {
+    /* Time of the measurement (system time) */
+    struct timeval tv;
+
+    /* Offset between the true time and the system time (in seconds)
+     *
+     * Seems to be sys + offset = true
+     * https://github.com/mlichvar/chrony/blob/master/refclock_sock.c#L135
+     */
+    double offset;
+
+    /* Non-zero if the sample is from a PPS signal, i.e. another source
+       is needed to obtain seconds */
+    int pulse;
+
+    /* 0 - normal, 1 - insert leap second, 2 - delete leap second */
+    int leap;
+
+    /* Padding, ignored */
+    int _pad;
+
+    /* Protocol identifier (0x534f434b) */
+    int magic;
+};
+
+void ChronySocket::send(PPSPulse const& pps, TimingPulseData const& pulse_data)
+{
+    auto utctime = pulse_data.time();
+    auto systime = pps.time;
+
+    SocketSample sample;
+    sample.tv.tv_sec = systime.toMicroseconds() / 1000000ULL;
+    sample.tv.tv_usec = systime.toMicroseconds() % 1000000ULL;
+    sample.offset = (utctime - systime).toSeconds();
+    sample.pulse = 0;
+    sample.leap = 0;
+    sample._pad = 0;
+    sample.magic = CHRONY_SOCK_MAGIC;
+
+    writePacket(reinterpret_cast<uint8_t const*>(&sample), sizeof(sample));
+}
