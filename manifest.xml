@@ -11,5 +11,6 @@
   <depend package="base/types" />
   <depend package="drivers/gps_base" />
   <depend package="drivers/iodrivers_base" />
+  <depend package="pps-tools" />
   <test_depend package="google-test" />
 </package>
