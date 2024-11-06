@@ -1,5 +1,11 @@
 #include <gps_ublox/chrony.hpp>
 
+#if HAVE_SYS_TIMEPPS
+#include <sys/timepps.h>
+#else
+#include <timepps.h>
+#endif
+
 using namespace gps_ublox;
 using namespace gps_ublox::chrony;
 
@@ -29,22 +35,27 @@ namespace {
     };
 }
 
-PPS::PPS(pps_handle_t handle, int fd)
-    : m_handle(handle)
-    , m_fd(fd)
+struct PPS::Handle {
+    pps_handle_t handle;
+    int fd = -1;
+};
+
+PPS::PPS(Handle const& handle)
+    : m_handle(new Handle(handle))
 {
 }
 
 PPS::PPS(PPS&& other)
-    : m_handle(other.m_handle)
-    , m_fd(other.m_fd) {
-    other.m_fd = -1;
+    : m_handle(std::move(other.m_handle))
+{
+    other.m_handle->fd = -1;
 }
 
-PPS::~PPS() {
-    if (m_fd != -1) {
-        time_pps_destroy(m_handle);
-        close(m_fd);
+PPS::~PPS()
+{
+    if (m_handle->fd != -1) {
+        time_pps_destroy(m_handle->handle);
+        close(m_handle->fd);
     }
 }
 
@@ -55,7 +66,7 @@ PPSPulse PPS::wait()
     ts.tv_nsec = 0;
 
     pps_info_t pps_info;
-    if (time_pps_fetch(m_fd, PPS_TSFMT_TSPEC, &pps_info, &ts) < 0) {
+    if (time_pps_fetch(m_handle->fd, PPS_TSFMT_TSPEC, &pps_info, &ts) < 0) {
         throw UnixError("failed to fetch PPS");
     }
 
@@ -105,7 +116,7 @@ PPS PPS::open(std::string const& path)
         throw UnixError("could not set PPS params for " + path);
     }
 
-    return PPS(pps_guard.release(), guard.release());
+    return PPS({ pps_guard.release(), guard.release() });
 }
 
 int ChronySocket::extractPacket(uint8_t const* buffer, size_t buffer_size) const

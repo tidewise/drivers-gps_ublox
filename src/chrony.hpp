@@ -2,11 +2,11 @@
 #define GPS_UBLOX_CHRONY_HPP
 
 #include <fcntl.h>
+#include <memory>
+#include <string>
 #include <sys/stat.h>
-#include <sys/timepps.h>
 #include <sys/types.h>
 #include <utility>
-#include <string>
 
 #include <base/Time.hpp>
 #include <iodrivers_base/Driver.hpp>
@@ -19,19 +19,22 @@ namespace gps_ublox {
         struct PPSPulse {
             base::Time time;
             int16_t time_ns = 0;
-            pps_seq_t sequence = 0;
+            uint64_t sequence = 0;
 
-            bool valid() const {
+            bool valid() const
+            {
                 return !time.isNull();
             }
         };
 
         /** Management of the PPS source */
         class PPS {
-            pps_handle_t m_handle;
-            int m_fd = -1;
+            /** Private struct used to hide the dependency on ppstime.h */
+            struct Handle;
+            std::unique_ptr<Handle> m_handle;
 
-            PPS(pps_handle_t handle, int fd);
+            PPS(Handle const& handle);
+
         public:
             ~PPS();
             PPS(PPS const&) = delete;
