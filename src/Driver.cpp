@@ -49,7 +49,7 @@ TimingPulseData Driver::latestTimingPulseData() {
     Frame frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP);
     try {
         while(true) {
-            waitForFrame(MSG_CLASS_TIM, MSG_ID_TP, base::Time());
+            frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP, base::Time());
         }
     }
     catch(iodrivers_base::TimeoutError&) {}
