@@ -157,7 +157,7 @@ struct SocketSample {
     int magic;
 };
 
-void ChronySocket::send(PPSPulse const& pps, TimingPulseData const& pulse_data)
+double ChronySocket::send(PPSPulse const& pps, TimingPulseData const& pulse_data)
 {
     auto utctime = pulse_data.time();
     auto systime = pps.time;
@@ -172,4 +172,5 @@ void ChronySocket::send(PPSPulse const& pps, TimingPulseData const& pulse_data)
     sample.magic = CHRONY_SOCK_MAGIC;
 
     writePacket(reinterpret_cast<uint8_t const*>(&sample), sizeof(sample));
+    return sample.offset;
 }

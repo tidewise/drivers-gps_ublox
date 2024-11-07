@@ -603,10 +603,26 @@ int main(int argc, char** argv)
         socket.openURI(chrony_uri);
 
         driver.setReadTimeout(base::Time::fromSeconds(20));
+
+        uint64_t last_pulse_sequence = 0;
         while(true) {
             auto tp = driver.latestTimingPulseData();
+            std::cout << "pulse next utc=" << tp.time() << "\n";
             auto pulse = pps.wait();
-            socket.send(pulse, tp);
+            if (pulse.time.isNull()) {
+                std::cout << "ignored pulse with zero timestamp\n";
+                continue;
+            }
+            if (pulse.sequence == last_pulse_sequence) {
+                std::cout << "ignored pulse with duplicate sequence number\n";
+                continue;
+            }
+            last_pulse_sequence = pulse.sequence;
+
+            std::cout << "pulse received seq=" << pulse.sequence
+                      << " sys=" << tp.timestamp << "\n";
+            auto offset = socket.send(pulse, tp);
+            std::cout << "sent sample to chrony, offset: " << offset << "\n";
         }
     }
     else {

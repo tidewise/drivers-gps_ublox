@@ -54,7 +54,7 @@ namespace gps_ublox {
         public:
             ChronySocket();
 
-            void send(PPSPulse const& pps, TimingPulseData const& pulse_data);
+            double send(PPSPulse const& pps, TimingPulseData const& pulse_data);
         };
     }
 }
