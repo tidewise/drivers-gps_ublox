@@ -5,9 +5,12 @@
 #include <iomanip>
 #include <poll.h>
 
+#include <gps_ublox/chrony.hpp>
+
 using namespace base;
 using namespace gps_ublox;
 using namespace std;
+using iodrivers_base::UnixError;
 
 struct RTCMForwarder : public iodrivers_base::Driver {
     int extractPacket(uint8_t const* buffer, size_t size) const {
@@ -77,6 +80,15 @@ int usage()
         << "     debugging of the transmission)\n"
         << "  reference-station PORT TARGET        configure itself as a RTK reference\n"
         << "                                       station, forward RTCM messages to TARGET\n"
+           "TARGET\n"
+        << "  chrony-configure PORT\n"
+        << "     permanently configure the device to output the UBLOX time message\n"
+        << "     on PORT that is needed for the chrony subcommand\n"
+        << "  time PORT\n"
+        << "     display time-related information based on the TimeUTC message\n"
+        << "  chrony SOCKET PPS\n"
+        << "     read the UBX TimeUTC message from UBLOX_DEVICE as well as a source\n"
+        << "     of PPS data and forward time correction information to SOCKET\n"
         << flush;
 
     return 0;
@@ -168,6 +180,48 @@ struct PollCallbacks : Driver::PollCallbacks {
             << setw(4) << satsWithCarrierRange << "\n";
     }
 
+    static void timeutcHeader(std::ostream& out) {
+        out
+            << left
+            << setw(18) << "Systime" << " "
+            << setw(18) << "UTC" << " "
+            << setw(9) << "Latency (sys2utc)" << " "
+            << setw(20) << "Validity" << "\n";
+    }
+
+
+    void timeUTC(TimeUTC const& time) override {
+        std::cout
+            << time.timestamp << " "
+            << time.utc << " "
+            << setw(9) << setprecision(6) << fixed
+            << (time.timestamp - time.utc).toSeconds();
+
+        char sep = ' ';
+        if (time.validity & TimeUTC::TIME_VALID_UTC) {
+            cout << sep << "UTC";
+            sep = '|';
+        }
+        if (time.validity & TimeUTC::TIME_VALID_TIME_OF_WEEK) {
+            cout << sep << "ITOW";
+            sep = '|';
+        }
+        if (time.validity & TimeUTC::TIME_VALID_WEEK_NUMBER) {
+            cout << sep << "WEEK_NUMBER";
+        }
+        cout << "\n";
+    }
+
+    void timingPulseData(TimingPulseData const& data) override {
+        uint64_t week_time_ms =
+            static_cast<uint64_t>(data.week_number) * 7 * 24 * 3600 * 1000;
+        base::Time week_time =
+            base::Time::fromMilliseconds(315964800000ULL) +
+            base::Time::fromMilliseconds(week_time_ms);
+        base::Time time = week_time + data.time_of_week;
+        std::cout << "Next pulse " << time << "\n";
+    }
+
     void rtcm(uint8_t const* buffer, size_t size) override {
         if (!rtcm_out) {
             return;
@@ -256,6 +310,21 @@ struct PollCallbacks : Driver::PollCallbacks {
     }
 };
 
+class RawIODriver : public iodrivers_base::Driver {
+    static constexpr int BUFFER_SIZE = 32768;
+
+    int extractPacket(uint8_t const* buffer, size_t buffer_size) const
+    {
+        return 0;
+    }
+
+public:
+    RawIODriver()
+        : Driver(BUFFER_SIZE)
+    {
+    }
+};
+
 void setDefaults(DevicePort port, Driver& driver, bool rtcm_in) {
     driver.setPortProtocol(port, DIRECTION_INPUT, PROTOCOL_UBX, true, false);
     driver.setPortProtocol(port, DIRECTION_INPUT, PROTOCOL_RTCM3X, rtcm_in, false);
@@ -266,6 +335,8 @@ void setDefaults(DevicePort port, Driver& driver, bool rtcm_in) {
     driver.setOutputRate(port, MSGOUT_NAV_RELPOSNED, 0, false);
     driver.setOutputRate(port, MSGOUT_NAV_SAT, 0, false);
     driver.setOutputRate(port, MSGOUT_RXM_RTCM, 0, false);
+    driver.setOutputRate(port, MSGOUT_NAV_TIMEUTC, 0, false);
+    driver.setOutputRate(port, MSGOUT_TIM_TP, 0, false);
     driver.setReadTimeout(base::Time::fromMilliseconds(2000));
 }
 
@@ -320,6 +391,8 @@ DevicePort portFromString(string const& arg) {
         throw std::invalid_argument(arg + " is not a valid port name");
     }
 }
+
+#define CHRONY_SOCK_MAGIC 0x534f434b
 
 int main(int argc, char** argv)
 {
@@ -441,6 +514,7 @@ int main(int argc, char** argv)
 
         driver.openURI(uri);
         setDefaults(port, driver, true);
+        driver.setOutputRate(port, MSGOUT_NAV_PVT, 1, false);
         driver.setOutputRate(port, MSGOUT_NAV_RELPOSNED, 1, false);
         driver.setOutputRate(port, MSGOUT_NAV_SAT, 5, false);
         if (monitor_rtcm) {
@@ -476,7 +550,82 @@ int main(int argc, char** argv)
 
         PollCallbacks::pvtHeader(cout);
         poll(driver, nullptr, &rtcm_out);
-    } else {
+    }
+    else if (cmd == "time") {
+        if (argc != 4) {
+            usage();
+            return 1;
+        }
+
+        auto port = portFromString(argv[3]);
+        driver.openURI(uri);
+        setDefaults(port, driver, true);
+        driver.setOutputRate(port, MSGOUT_NAV_TIMEUTC, 1, false);
+        driver.setOutputRate(port, MSGOUT_TIM_TP, 1, false);
+        driver.setReadTimeout(base::Time::fromMilliseconds(2000));
+        driver.setTimePulseTimeReference(TIME_PULSE_TIME_REFERENCE_UTC);
+
+        PollCallbacks::timeutcHeader(cout);
+        poll(driver, nullptr, nullptr);
+    }
+    else if (cmd == "chrony-configure") {
+        if (argc != 4 && argc != 5) {
+            usage();
+            return 1;
+        }
+
+        auto port = portFromString(argv[3]);
+        base::Time period = base::Time::fromMilliseconds(1000);
+        if (argc == 5) {
+            period = base::Time::fromMicroseconds(stoi(argv[4]));
+        }
+
+        driver.openURI(uri);
+        setDefaults(port, driver, false);
+        driver.setOutputRate(port, MSGOUT_TIM_TP, 1);
+        driver.setTimePulsePeriod(period);
+        driver.setTimePulseTimeReference(TIME_PULSE_TIME_REFERENCE_UTC);
+        driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_UBX, true);
+    }
+    else if (cmd == "chrony") {
+        if (argc != 5) {
+            usage();
+            return 1;
+        }
+
+        string chrony_uri = argv[3];
+        string pps_path = argv[4];
+
+        driver.openURI(uri);
+
+        chrony::PPS pps = chrony::PPS::open(pps_path);
+        chrony::ChronySocket socket;
+        socket.openURI(chrony_uri);
+
+        driver.setReadTimeout(base::Time::fromSeconds(20));
+
+        uint64_t last_pulse_sequence = 0;
+        while(true) {
+            auto tp = driver.latestTimingPulseData();
+            std::cout << "pulse next utc=" << tp.time() << "\n";
+            auto pulse = pps.wait();
+            if (pulse.time.isNull()) {
+                std::cout << "ignored pulse with zero timestamp\n";
+                continue;
+            }
+            if (pulse.sequence == last_pulse_sequence) {
+                std::cout << "ignored pulse with duplicate sequence number\n";
+                continue;
+            }
+            last_pulse_sequence = pulse.sequence;
+
+            std::cout << "pulse received seq=" << pulse.sequence
+                      << " sys=" << tp.timestamp << "\n";
+            auto offset = socket.send(pulse, tp);
+            std::cout << "sent sample to chrony, offset: " << offset << "\n";
+        }
+    }
+    else {
         cerr << "unexpected command " << cmd << endl;
         return usage();
     }

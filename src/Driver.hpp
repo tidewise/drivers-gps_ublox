@@ -35,6 +35,8 @@ namespace gps_ublox
                 virtual void signalInfo(SignalInfo const& info) {};
                 virtual void rfInfo(RFInfo const& info) {};
                 virtual void commsInfo(CommsInfo const& info) {};
+                virtual void timeUTC(TimeUTC const& info) {};
+                virtual void timingPulseData(TimingPulseData const& info) {};
             };
 
         private:
@@ -44,9 +46,20 @@ namespace gps_ublox
 
             UBX::Frame pollFrame(uint8_t class_id, uint8_t msg_id);
             UBX::Frame waitForFrame(uint8_t class_id, uint8_t msg_id);
-            UBX::Frame waitForPacket(const uint8_t *class_id = nullptr,
-                                     const uint8_t *msg_id = nullptr,
-                                     const std::vector<uint8_t> *payload = nullptr);
+            UBX::Frame waitForFrame(
+                uint8_t class_id, uint8_t msg_id, base::Time const& timeout
+            );
+            UBX::Frame waitForPacket(
+                const uint8_t *class_id = nullptr,
+                const uint8_t *msg_id = nullptr,
+                const std::vector<uint8_t> *payload = nullptr
+            );
+            UBX::Frame waitForPacket(
+                base::Time const& timeout,
+                const uint8_t *class_id = nullptr,
+                const uint8_t *msg_id = nullptr,
+                const std::vector<uint8_t> *payload = nullptr
+            );
             bool waitForAck(uint8_t class_id, uint8_t msg_id);
             void pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout);
 
@@ -219,6 +232,15 @@ namespace gps_ublox
              */
             void setRTCMOutputRate(DevicePort port, uint16_t msg, uint8_t rate = 1, bool persist = true);
 
+            /** Sets the period of the time pulse
+             *
+             * @param period the time pulse period
+             */
+            void setTimePulsePeriod(base::Time const& period, bool persist = true);
+
+            /** Sets the time reference of the time pulse data message */
+            void setTimePulseTimeReference(TimePulseTimeReference reference, bool persist = true);
+
             /** Requests device version information
              */
             BoardInfo readBoardInfo();
@@ -259,6 +281,9 @@ namespace gps_ublox
             /** Reads any frame
              */
             UBX::Frame readFrame();
+
+            /** Read all pending timing pulse data samples and return the last one */
+            TimingPulseData latestTimingPulseData();
 
             /** Read all available frames and dispatch them synchronously
              * to the given callbacks

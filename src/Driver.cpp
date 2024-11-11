@@ -45,6 +45,17 @@ PVT Driver::waitForPVT() {
     return UBX::parsePVT(frame.payload);
 }
 
+TimingPulseData Driver::latestTimingPulseData() {
+    Frame frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP);
+    try {
+        while(true) {
+            frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP, base::Time());
+        }
+    }
+    catch(iodrivers_base::TimeoutError&) {}
+    return UBX::parseTimingPulseData(frame.payload);
+}
+
 RelPosNED Driver::waitForRelPosNED() {
     Frame frame = waitForFrame(MSG_CLASS_NAV, MSG_ID_RELPOSNED);
     return UBX::parseRelPosNED(frame.payload);
@@ -123,15 +134,34 @@ void Driver::pollOneFrame(PollCallbacks& callbacks, base::Time const& timeout) {
     else if (frame.msg_class == UBX::MSG_CLASS_MON && frame.msg_id == UBX::MSG_ID_COMMS) {
         callbacks.commsInfo(UBX::parseCommsInfo(frame.payload));
     }
+    else if (frame.msg_class == UBX::MSG_CLASS_NAV && frame.msg_id == UBX::MSG_ID_TIMEUTC) {
+        callbacks.timeUTC(UBX::parseTimeUTC(frame.payload));
+    }
+    else if (frame.msg_class == UBX::MSG_CLASS_TIM && frame.msg_id == UBX::MSG_ID_TP) {
+        callbacks.timingPulseData(UBX::parseTimingPulseData(frame.payload));
+    }
 }
 
-Frame Driver::waitForPacket(const uint8_t *class_id, const uint8_t *msg_id,
-                            const std::vector<uint8_t> *payload)
+Frame Driver::waitForPacket(
+    const uint8_t *class_id, const uint8_t *msg_id,
+    const std::vector<uint8_t> *payload
+)
 {
-    base::Time deadline = base::Time::now() + getReadTimeout();
-    while (base::Time::now() < deadline) {
-        base::Time remaining = deadline - base::Time::now();
+    return waitForPacket(getReadTimeout(), class_id, msg_id, payload);
+}
+
+Frame Driver::waitForPacket(
+    base::Time const& timeout,
+    const uint8_t *class_id, const uint8_t *msg_id,
+    const std::vector<uint8_t> *payload
+)
+{
+    base::Time now = base::Time::now();
+    base::Time deadline = now + timeout;
+    while(now < deadline) {
+        base::Time remaining = deadline - now;
         int bytes = readPacket(mReadBuffer, BUFFER_SIZE, remaining);
+        now = base::Time::now();
 
         if (gps_base::rtcm3::isPreamble(mReadBuffer, bytes)) {
             continue;
@@ -166,9 +196,14 @@ void Driver::writeRTCM(std::vector<uint8_t> const& data) {
     }
 }
 
+Frame Driver::waitForFrame(uint8_t class_id, uint8_t msg_id, base::Time const& timeout)
+{
+    return waitForPacket(timeout, &class_id, &msg_id);
+}
+
 Frame Driver::waitForFrame(uint8_t class_id, uint8_t msg_id)
 {
-    return waitForPacket(&class_id, &msg_id);
+    return waitForFrame(class_id, msg_id, getReadTimeout());
 }
 
 bool Driver::waitForAck(uint8_t class_id, uint8_t msg_id)
@@ -347,4 +382,16 @@ void Driver::setSpeedThreshold(uint8_t speed, bool persist)
 void Driver::setStaticHoldDistanceThreshold(uint16_t distance, bool persist)
 {
     setConfigKeyValue(cfg::MOT_GNSSDIST_THRS, distance, persist);
+}
+
+void Driver::setTimePulsePeriod(base::Time const& period, bool persist)
+{
+    setConfigKeyValue<uint8_t>(cfg::TP_PULSE_DEF, TIME_PULSE_DEF_PERIOD, persist);
+    setConfigKeyValue<uint32_t>(cfg::TP_PERIOD_TP1, period.toMicroseconds(), persist);
+    setConfigKeyValue<uint32_t>(cfg::TP_PERIOD_LOCK_TP1, period.toMicroseconds(), persist);
+}
+
+void Driver::setTimePulseTimeReference(TimePulseTimeReference reference, bool persist)
+{
+    setConfigKeyValue<uint8_t>(cfg::TP_TIMEGRID_TP1, reference, persist);
 }

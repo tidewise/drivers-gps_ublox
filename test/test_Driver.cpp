@@ -720,6 +720,31 @@ TEST_F(DriverTest, poll_calls_back_for_rtcmReceivedMessage) {
     ASSERT_EQ(16, callbacks.data.message_type);
 }
 
+TEST_F(DriverTest, poll_calls_back_for_timeutc) {
+    struct Callbacks : Driver::PollCallbacks {
+        TimeUTC data;
+
+        void timeUTC(TimeUTC const& timeutc) override {
+            data = timeutc;
+        }
+    };
+
+    IODRIVERS_BASE_MOCK();
+    Frame frame;
+    frame.msg_class = MSG_CLASS_NAV;
+    frame.msg_id = MSG_ID_TIMEUTC;
+    frame.payload.resize(20);
+    frame.payload[0] = 5;
+    pushDataToDriver(frame.toPacket());
+
+    Callbacks callbacks;
+    driver.poll(callbacks);
+
+    ASSERT_EQ(base::Time::fromMilliseconds(5),
+              callbacks.data.gps_time_of_week);
+}
+
+
 template<typename T>
 void toLittleEndian(vector<uint8_t> &buffer, T value)
 {

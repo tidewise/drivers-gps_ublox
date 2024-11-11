@@ -71,9 +71,21 @@ namespace gps_ublox {
         MSGOUT_NAV_RELPOSNED = 0x2091008d,
         MSGOUT_NAV_SAT = 0x20910015,
         MSGOUT_NAV_SIG = 0x20910345,
+        MSGOUT_NAV_TIMEUTC = 0x2091005b,
         MSGOUT_MON_RF = 0x20910359,
         MSGOUT_RXM_RTCM = 0x20910268,
-        MSGOUT_MON_COMMS = 0x2091034f
+        MSGOUT_MON_COMMS = 0x2091034f,
+        MSGOUT_TIM_TP = 0x2091017d
+    };
+
+    enum TimePulseDefModes {
+        TIME_PULSE_DEF_PERIOD = 0,
+        TIME_PULSE_DEF_FREQUENCY = 1
+    };
+
+    enum TimePulseTimeReference {
+        TIME_PULSE_TIME_REFERENCE_UTC = 0,
+        TIME_PULSE_TIME_REFERENCE_GPS = 1
     };
 
     namespace cfg {
@@ -101,7 +113,11 @@ namespace gps_ublox {
             RATE_TIMEREF = 0x20210003,
             NAVSPG_DYNMODEL = 0x20110021,
             MOT_GNSSSPEED_THRS = 0x20250038,
-            MOT_GNSSDIST_THRS = 0x3025003b
+            MOT_GNSSDIST_THRS = 0x3025003b,
+            TP_PULSE_DEF = 0x20050023,
+            TP_PERIOD_TP1 = 0x40050002,
+            TP_PERIOD_LOCK_TP1 = 0x40050003,
+            TP_TIMEGRID_TP1 = 0x2005000c
         };
 
         std::uint32_t getPortControlKey(DevicePort port);
