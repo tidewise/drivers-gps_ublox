@@ -84,7 +84,8 @@ int usage()
         << "  chrony-configure PORT [PERIOD_US]\n"
         << "     permanently configure the device to output the UBLOX time message\n"
         << "     on PORT that is needed for the chrony subcommand. Optionally modify\n"
-        << "     the period of the PPS (in microseconds)\n"
+        << "     the period of the PPS (in microseconds). If the period is not given,\n"
+        << "     the command does not modify the existing period.\n"
         << "  time PORT\n"
         << "     display time-related information based on the TimeUTC message\n"
         << "  chrony SOCKET PPS\n"
@@ -576,15 +577,15 @@ int main(int argc, char** argv)
         }
 
         auto port = portFromString(argv[3]);
-        base::Time period = base::Time::fromMilliseconds(1000);
+        driver.openURI(uri);
+
         if (argc == 5) {
-            period = base::Time::fromMicroseconds(stoi(argv[4]));
+            base::Time period = base::Time::fromMicroseconds(stoi(argv[4]));
+            driver.setTimePulsePeriod(period);
         }
 
-        driver.openURI(uri);
         setDefaults(port, driver, false);
         driver.setOutputRate(port, MSGOUT_TIM_TP, 1);
-        driver.setTimePulsePeriod(period);
         driver.setTimePulseTimeReference(TIME_PULSE_TIME_REFERENCE_UTC);
         driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_UBX, true);
     }
