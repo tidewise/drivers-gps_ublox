@@ -76,7 +76,8 @@ PPSPulse PPS::wait()
 
     PPSPulse pulse;
     pulse.time = base::Time::fromMicroseconds(
-        static_cast<uint64_t>(ts.tv_sec) + static_cast<uint64_t>(ts.tv_nsec / 1000));
+        static_cast<uint64_t>(ts.tv_sec) * 1000000ULL +
+        static_cast<uint64_t>(ts.tv_nsec / 1000));
     pulse.time_ns = ts.tv_nsec % 1000;
     pulse.sequence = pps_info.assert_sequence;
     return pulse;
