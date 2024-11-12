@@ -20,6 +20,8 @@ namespace {
             : m_handle(handle)
         {
         }
+        PPSGuard(PPSGuard const&) = delete;
+
         ~PPSGuard()
         {
             if (!m_released) {
