@@ -621,7 +621,7 @@ int main(int argc, char** argv)
             last_pulse_sequence = pulse.sequence;
 
             std::cout << "pulse received seq=" << pulse.sequence
-                      << " sys=" << tp.timestamp << "\n";
+                      << " sys=" << pulse.time << "\n";
             auto offset = socket.send(pulse, tp);
             std::cout << "sent sample to chrony, offset: " << offset << "\n";
         }
