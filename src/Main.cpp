@@ -4,6 +4,8 @@
 #include <map>
 #include <iomanip>
 #include <poll.h>
+#include <thread>
+#include <mutex>
 
 #include <gps_ublox/chrony.hpp>
 
@@ -606,14 +608,40 @@ int main(int argc, char** argv)
 
         driver.setReadTimeout(base::Time::fromSeconds(20));
 
+        // Polling thread to read timing pulse data. The main thread
+        // always uses the last one received before the PPS
         uint64_t last_pulse_sequence = 0;
-        TimingPulseData tp;
+
+        // Polling thread, reading the Ublox next-pulse information
+        TimingPulseData last_tp;
+        std::mutex last_tp_mutex;
+        std::thread ublox_timing_polling_thread([&driver, &last_tp, &last_tp_mutex]() {
+            while(true) {
+                auto tp = driver.readTimingPulseData();
+                {
+                    lock_guard<mutex> guard(last_tp_mutex);
+                    last_tp = tp;
+                }
+
+                std::cout
+                    << "pulse next utc=" << tp.time()
+                    << " received at time=" << tp.timestamp << "\n";
+            }
+        });
+
         while(true) {
-            tp = driver.latestTimingPulseData(tp.time());
-            std::cout
-                << "pulse next utc=" << tp.time()
-                << " received at time=" << tp.timestamp << "\n";
             auto pulse = pps.wait();
+            TimingPulseData pulse_tp;
+            {
+                lock_guard<mutex> guard(last_tp_mutex);
+                pulse_tp = last_tp;
+            }
+
+            if (pulse_tp.timestamp > pulse.time) {
+                std::cout << "ignored pulse, corresponding ublox timing "
+                             "information was received afterwards\n";
+                continue;
+            }
             if (pulse.time.isNull()) {
                 std::cout << "ignored pulse with zero timestamp\n";
                 continue;
@@ -626,7 +654,10 @@ int main(int argc, char** argv)
 
             std::cout << "pulse received seq=" << pulse.sequence
                       << " sys=" << pulse.time << "\n";
-            auto offset = socket.send(pulse, tp);
+            std::cout
+                << "  associated with utc=" << pulse_tp.time()
+                << " received at time=" << pulse_tp.timestamp << "\n";
+            auto offset = socket.send(pulse, pulse_tp);
             std::cout << "sent sample to chrony, offset: " << offset << "\n";
         }
     }
