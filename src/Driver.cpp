@@ -45,15 +45,24 @@ PVT Driver::waitForPVT() {
     return UBX::parsePVT(frame.payload);
 }
 
-TimingPulseData Driver::latestTimingPulseData() {
-    Frame frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP);
+TimingPulseData Driver::latestTimingPulseData(base::Time const& last_time) {
+    TimingPulseData tp;
+    while (true) {
+        Frame frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP);
+        tp = UBX::parseTimingPulseData(frame.payload);
+        if (tp.time() == last_time) {
+            continue;
+        }
+    }
+
     try {
         while(true) {
-            frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP, base::Time());
+            Frame frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP, base::Time());
+            tp = UBX::parseTimingPulseData(frame.payload);
         }
     }
     catch(iodrivers_base::TimeoutError&) {}
-    return UBX::parseTimingPulseData(frame.payload);
+    return tp;
 }
 
 RelPosNED Driver::waitForRelPosNED() {

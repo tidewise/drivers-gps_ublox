@@ -607,9 +607,12 @@ int main(int argc, char** argv)
         driver.setReadTimeout(base::Time::fromSeconds(20));
 
         uint64_t last_pulse_sequence = 0;
+        TimingPulseData tp;
         while(true) {
-            auto tp = driver.latestTimingPulseData();
-            std::cout << "pulse next utc=" << tp.time() << "\n";
+            tp = driver.latestTimingPulseData(tp.time());
+            std::cout
+                << "pulse next utc=" << tp.time()
+                << " received at time=" << tp.timestamp << "\n";
             auto pulse = pps.wait();
             if (pulse.time.isNull()) {
                 std::cout << "ignored pulse with zero timestamp\n";
