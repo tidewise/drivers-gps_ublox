@@ -4,6 +4,8 @@
 #include <map>
 #include <iomanip>
 #include <poll.h>
+#include <thread>
+#include <mutex>
 
 #include <gps_ublox/chrony.hpp>
 
@@ -81,9 +83,11 @@ int usage()
         << "  reference-station PORT TARGET        configure itself as a RTK reference\n"
         << "                                       station, forward RTCM messages to TARGET\n"
            "TARGET\n"
-        << "  chrony-configure PORT\n"
+        << "  chrony-configure PORT [PERIOD_US]\n"
         << "     permanently configure the device to output the UBLOX time message\n"
-        << "     on PORT that is needed for the chrony subcommand\n"
+        << "     on PORT that is needed for the chrony subcommand. Optionally modify\n"
+        << "     the period of the PPS (in microseconds). If the period is not given,\n"
+        << "     the command does not modify the existing period.\n"
         << "  time PORT\n"
         << "     display time-related information based on the TimeUTC message\n"
         << "  chrony SOCKET PPS\n"
@@ -575,15 +579,15 @@ int main(int argc, char** argv)
         }
 
         auto port = portFromString(argv[3]);
-        base::Time period = base::Time::fromMilliseconds(1000);
+        driver.openURI(uri);
+
         if (argc == 5) {
-            period = base::Time::fromMicroseconds(stoi(argv[4]));
+            base::Time period = base::Time::fromMicroseconds(stoi(argv[4]));
+            driver.setTimePulsePeriod(period);
         }
 
-        driver.openURI(uri);
         setDefaults(port, driver, false);
         driver.setOutputRate(port, MSGOUT_TIM_TP, 1);
-        driver.setTimePulsePeriod(period);
         driver.setTimePulseTimeReference(TIME_PULSE_TIME_REFERENCE_UTC);
         driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_UBX, true);
     }
@@ -604,11 +608,40 @@ int main(int argc, char** argv)
 
         driver.setReadTimeout(base::Time::fromSeconds(20));
 
+        // Polling thread to read timing pulse data. The main thread
+        // always uses the last one received before the PPS
         uint64_t last_pulse_sequence = 0;
+
+        // Polling thread, reading the Ublox next-pulse information
+        TimingPulseData last_tp;
+        std::mutex last_tp_mutex;
+        std::thread ublox_timing_polling_thread([&driver, &last_tp, &last_tp_mutex]() {
+            while(true) {
+                auto tp = driver.readTimingPulseData();
+                {
+                    lock_guard<mutex> guard(last_tp_mutex);
+                    last_tp = tp;
+                }
+
+                std::cout
+                    << "pulse next utc=" << tp.time()
+                    << " received at time=" << tp.timestamp << "\n";
+            }
+        });
+
         while(true) {
-            auto tp = driver.latestTimingPulseData();
-            std::cout << "pulse next utc=" << tp.time() << "\n";
             auto pulse = pps.wait();
+            TimingPulseData pulse_tp;
+            {
+                lock_guard<mutex> guard(last_tp_mutex);
+                pulse_tp = last_tp;
+            }
+
+            if (pulse_tp.timestamp > pulse.time) {
+                std::cout << "ignored pulse, corresponding ublox timing "
+                             "information was received afterwards\n";
+                continue;
+            }
             if (pulse.time.isNull()) {
                 std::cout << "ignored pulse with zero timestamp\n";
                 continue;
@@ -620,8 +653,11 @@ int main(int argc, char** argv)
             last_pulse_sequence = pulse.sequence;
 
             std::cout << "pulse received seq=" << pulse.sequence
-                      << " sys=" << tp.timestamp << "\n";
-            auto offset = socket.send(pulse, tp);
+                      << " sys=" << pulse.time << "\n";
+            std::cout
+                << "  associated with utc=" << pulse_tp.time()
+                << " received at time=" << pulse_tp.timestamp << "\n";
+            auto offset = socket.send(pulse, pulse_tp);
             std::cout << "sent sample to chrony, offset: " << offset << "\n";
         }
     }
