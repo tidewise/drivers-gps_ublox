@@ -616,16 +616,32 @@ int main(int argc, char** argv)
         TimingPulseData last_tp;
         std::mutex last_tp_mutex;
         std::thread ublox_timing_polling_thread([&driver, &last_tp, &last_tp_mutex]() {
-            while(true) {
-                auto tp = driver.readTimingPulseData();
-                {
-                    lock_guard<mutex> guard(last_tp_mutex);
-                    last_tp = tp;
-                }
+            try {
+                while(true) {
+                    TimingPulseData tp;
+                    try {
+                        tp = driver.readTimingPulseData();
+                    }
+                    catch(iodrivers_base::TimeoutError&) {
+                        std::cerr << "received no pulse information" << std::endl;
+                        continue;
+                    }
 
-                std::cout
-                    << "pulse next utc=" << tp.time()
-                    << " received at time=" << tp.timestamp << "\n";
+                    {
+                        lock_guard<mutex> guard(last_tp_mutex);
+                        last_tp = tp;
+                    }
+
+                    std::cout
+                        << "pulse next utc=" << tp.time()
+                        << " received at time=" << tp.timestamp << std::endl;
+                }
+            }
+            catch(std::runtime_error& e) {
+                std::cerr << "reading timing pulse failed with error "
+                          << e.what() << std::endl;
+                driver.close();
+                exit(1);
             }
         });
 
