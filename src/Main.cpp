@@ -653,28 +653,37 @@ int main(int argc, char** argv)
                 pulse_tp = last_tp;
             }
 
-            if (pulse_tp.timestamp > pulse.time) {
-                std::cout << "ignored pulse, corresponding ublox timing "
-                             "information was received afterwards\n";
+            if (pulse_tp.timestamp.isNull()) {
                 continue;
             }
-            if (pulse.time.isNull()) {
-                std::cout << "ignored pulse with zero timestamp\n";
-                continue;
-            }
+
             if (pulse.sequence == last_pulse_sequence) {
-                std::cout << "ignored pulse with duplicate sequence number\n";
                 continue;
             }
             last_pulse_sequence = pulse.sequence;
 
-            std::cout << "pulse received seq=" << pulse.sequence
-                      << " sys=" << pulse.time << "\n";
+            if (pulse.time.isNull()) {
+                continue;
+            }
+
             std::cout
-                << "  associated with utc=" << pulse_tp.time()
-                << " received at time=" << pulse_tp.timestamp << "\n";
+                << "pulse received seq=" << pulse.sequence
+                << " sys=" << pulse.time << " received at time="
+                << pulse.receive_time << std::endl;
+
+            if (pulse_tp.timestamp > pulse.time) {
+                std::cout
+                    << "ignored pulse, corresponding ublox timing "
+                       "information was received after the PPS assertion time"
+                    << std::endl;
+                continue;
+            }
+
+            std::cout
+                << "associated pulse seq=" << pulse.sequence
+                << " with utc=" << pulse_tp.time() << std::endl;
             auto offset = socket.send(pulse, pulse_tp);
-            std::cout << "sent sample to chrony, offset: " << offset << "\n";
+            std::cout << "sent sample to chrony, offset: " << offset << std::endl;
         }
     }
     else {

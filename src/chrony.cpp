@@ -75,6 +75,7 @@ PPSPulse PPS::wait()
     ts = pps_info.assert_timestamp;
 
     PPSPulse pulse;
+    pulse.receive_time = base::Time::now();
     pulse.time = base::Time::fromMicroseconds(
         static_cast<uint64_t>(ts.tv_sec) * 1000000ULL +
         static_cast<uint64_t>(ts.tv_nsec / 1000));
