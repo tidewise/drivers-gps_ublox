@@ -6,6 +6,7 @@
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <optional>
 #include <utility>
 
 #include <base/Time.hpp>
@@ -47,7 +48,9 @@ namespace gps_ublox {
             PPS(PPS const&) = delete;
             PPS(PPS&& other);
 
-            PPSPulse wait();
+            std::optional<PPSPulse> wait(
+                base::Time const& timeout = base::Time::fromSeconds(1)
+            );
 
             static PPS open(std::string const& path);
         };

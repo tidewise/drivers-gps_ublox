@@ -646,7 +646,13 @@ int main(int argc, char** argv)
         });
 
         while(true) {
-            auto pulse = pps.wait();
+            auto pulse_opt = pps.wait(Time::fromSeconds(10));
+            if (!pulse_opt.has_value()) {
+                std::cout << "No PPS received in the last 10s" << std::endl;
+                continue;
+            }
+
+            auto pulse = *pulse_opt;
             TimingPulseData pulse_tp;
             {
                 lock_guard<mutex> guard(last_tp_mutex);
