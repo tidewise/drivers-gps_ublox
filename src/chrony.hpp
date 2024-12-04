@@ -6,6 +6,7 @@
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <optional>
 #include <utility>
 
 #include <base/Time.hpp>
@@ -17,8 +18,15 @@ namespace gps_ublox {
     namespace chrony {
         /** Representation of a single PPS pulse */
         struct PPSPulse {
+            /** System time when the pps read returned */
+            base::Time receive_time;
+            /** System time at the instance of the pulse acquisition (microsecond
+             * precision) */
             base::Time time;
+            /** Nanosecond part of the system time at the instant of pulse acquisition
+             */
             int16_t time_ns = 0;
+            /** Pulse sequence number */
             uint64_t sequence = 0;
 
             bool valid() const
@@ -40,7 +48,9 @@ namespace gps_ublox {
             PPS(PPS const&) = delete;
             PPS(PPS&& other);
 
-            PPSPulse wait();
+            std::optional<PPSPulse> wait(
+                base::Time const& timeout = base::Time::fromSeconds(1)
+            );
 
             static PPS open(std::string const& path);
         };

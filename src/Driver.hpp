@@ -283,7 +283,7 @@ namespace gps_ublox
             UBX::Frame readFrame();
 
             /** Read all pending timing pulse data samples and return the last one */
-            TimingPulseData latestTimingPulseData();
+            TimingPulseData readTimingPulseData();
 
             /** Read all available frames and dispatch them synchronously
              * to the given callbacks

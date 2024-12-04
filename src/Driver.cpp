@@ -45,14 +45,8 @@ PVT Driver::waitForPVT() {
     return UBX::parsePVT(frame.payload);
 }
 
-TimingPulseData Driver::latestTimingPulseData() {
+TimingPulseData Driver::readTimingPulseData() {
     Frame frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP);
-    try {
-        while(true) {
-            frame = waitForFrame(MSG_CLASS_TIM, MSG_ID_TP, base::Time());
-        }
-    }
-    catch(iodrivers_base::TimeoutError&) {}
     return UBX::parseTimingPulseData(frame.payload);
 }
 

@@ -8,6 +8,7 @@
 
 using namespace gps_ublox;
 using namespace gps_ublox::chrony;
+using namespace std;
 
 using iodrivers_base::UnixError;
 
@@ -20,6 +21,8 @@ namespace {
             : m_handle(handle)
         {
         }
+        PPSGuard(PPSGuard const&) = delete;
+
         ~PPSGuard()
         {
             if (!m_released) {
@@ -59,22 +62,30 @@ PPS::~PPS()
     }
 }
 
-PPSPulse PPS::wait()
+optional<PPSPulse> PPS::wait(base::Time const& timeout)
 {
+    uint64_t timeout_us = timeout.toMicroseconds();
     timespec ts;
-    ts.tv_sec = 0;
-    ts.tv_nsec = 0;
+    ts.tv_sec = timeout_us / 1000000;
+    ts.tv_nsec = (timeout_us % 1000000) * 1000;
 
     pps_info_t pps_info;
     if (time_pps_fetch(m_handle->fd, PPS_TSFMT_TSPEC, &pps_info, &ts) < 0) {
-        throw UnixError("failed to fetch PPS");
+        if (errno == ETIMEDOUT) {
+            return nullopt;
+        }
+        else {
+            throw UnixError("failed to fetch PPS");
+        }
     }
 
     ts = pps_info.assert_timestamp;
 
     PPSPulse pulse;
+    pulse.receive_time = base::Time::now();
     pulse.time = base::Time::fromMicroseconds(
-        static_cast<uint64_t>(ts.tv_sec) + static_cast<uint64_t>(ts.tv_nsec / 1000));
+        static_cast<uint64_t>(ts.tv_sec) * 1000000ULL +
+        static_cast<uint64_t>(ts.tv_nsec / 1000));
     pulse.time_ns = ts.tv_nsec % 1000;
     pulse.sequence = pps_info.assert_sequence;
     return pulse;
@@ -109,6 +120,10 @@ PPS PPS::open(std::string const& path)
     if (time_pps_getparams(handle, &params) < 0) {
         throw UnixError("could not query PPS params for " + path);
     }
+    if (!(params.mode & PPS_CANWAIT)) {
+        throw std::runtime_error("need a PPS that has CANWAIT support");
+    }
+
     params.mode |= PPS_CAPTUREASSERT;
     params.mode &= ~PPS_CAPTURECLEAR;
 

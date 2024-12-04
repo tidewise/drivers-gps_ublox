@@ -4,6 +4,8 @@
 #include <map>
 #include <iomanip>
 #include <poll.h>
+#include <thread>
+#include <mutex>
 
 #include <gps_ublox/chrony.hpp>
 
@@ -81,9 +83,11 @@ int usage()
         << "  reference-station PORT TARGET        configure itself as a RTK reference\n"
         << "                                       station, forward RTCM messages to TARGET\n"
            "TARGET\n"
-        << "  chrony-configure PORT\n"
+        << "  chrony-configure PORT [PERIOD_US]\n"
         << "     permanently configure the device to output the UBLOX time message\n"
-        << "     on PORT that is needed for the chrony subcommand\n"
+        << "     on PORT that is needed for the chrony subcommand. Optionally modify\n"
+        << "     the period of the PPS (in microseconds). If the period is not given,\n"
+        << "     the command does not modify the existing period.\n"
         << "  time PORT\n"
         << "     display time-related information based on the TimeUTC message\n"
         << "  chrony SOCKET PPS\n"
@@ -575,15 +579,15 @@ int main(int argc, char** argv)
         }
 
         auto port = portFromString(argv[3]);
-        base::Time period = base::Time::fromMilliseconds(1000);
+        driver.openURI(uri);
+
         if (argc == 5) {
-            period = base::Time::fromMicroseconds(stoi(argv[4]));
+            base::Time period = base::Time::fromMicroseconds(stoi(argv[4]));
+            driver.setTimePulsePeriod(period);
         }
 
-        driver.openURI(uri);
         setDefaults(port, driver, false);
         driver.setOutputRate(port, MSGOUT_TIM_TP, 1);
-        driver.setTimePulsePeriod(period);
         driver.setTimePulseTimeReference(TIME_PULSE_TIME_REFERENCE_UTC);
         driver.setPortProtocol(port, DIRECTION_OUTPUT, PROTOCOL_UBX, true);
     }
@@ -604,25 +608,94 @@ int main(int argc, char** argv)
 
         driver.setReadTimeout(base::Time::fromSeconds(20));
 
+        // Polling thread to read timing pulse data. The main thread
+        // always uses the last one received before the PPS
         uint64_t last_pulse_sequence = 0;
+
+        // Polling thread, reading the Ublox next-pulse information
+        std::optional<TimingPulseData> last_tp;
+        std::mutex last_tp_mutex;
+        std::thread ublox_timing_polling_thread([&driver, &last_tp, &last_tp_mutex]() {
+            try {
+                while(true) {
+                    TimingPulseData tp;
+                    try {
+                        tp = driver.readTimingPulseData();
+                    }
+                    catch(iodrivers_base::TimeoutError&) {
+                        std::cerr << "received no pulse information" << std::endl;
+                        continue;
+                    }
+
+                    {
+                        lock_guard<mutex> guard(last_tp_mutex);
+                        last_tp = tp;
+                    }
+
+                    std::cout
+                        << "pulse next utc=" << tp.time()
+                        << " received at time=" << tp.timestamp << std::endl;
+                }
+            }
+            catch(std::runtime_error& e) {
+                std::cerr << "reading timing pulse failed with error "
+                          << e.what() << std::endl;
+                driver.close();
+                exit(1);
+            }
+        });
+
         while(true) {
-            auto tp = driver.latestTimingPulseData();
-            std::cout << "pulse next utc=" << tp.time() << "\n";
-            auto pulse = pps.wait();
-            if (pulse.time.isNull()) {
-                std::cout << "ignored pulse with zero timestamp\n";
+            auto pulse_opt = pps.wait(Time::fromSeconds(10));
+            if (!pulse_opt.has_value()) {
+                std::cout << "No PPS received in the last 10s" << std::endl;
                 continue;
             }
+
+            auto pulse = *pulse_opt;
+            TimingPulseData pulse_tp;
+            {
+                lock_guard<mutex> guard(last_tp_mutex);
+                if (!last_tp.has_value()) {
+                    std::cout << "No new Ublox time message received since the last pulse"
+                              << std::endl;
+                    continue;
+                }
+                pulse_tp = *last_tp;
+                last_tp = nullopt;
+            }
+
+            if (pulse_tp.timestamp.isNull()) {
+                continue;
+            }
+
             if (pulse.sequence == last_pulse_sequence) {
-                std::cout << "ignored pulse with duplicate sequence number\n";
                 continue;
             }
             last_pulse_sequence = pulse.sequence;
 
-            std::cout << "pulse received seq=" << pulse.sequence
-                      << " sys=" << tp.timestamp << "\n";
-            auto offset = socket.send(pulse, tp);
-            std::cout << "sent sample to chrony, offset: " << offset << "\n";
+            if (pulse.time.isNull()) {
+                continue;
+            }
+
+            std::cout
+                << "pulse received seq=" << pulse.sequence
+                << " sys=" << pulse.time << " received at time="
+                << pulse.receive_time << std::endl;
+
+            if (pulse_tp.timestamp > pulse.time) {
+                std::cout
+                    << "ignored pulse, corresponding ublox timing "
+                       "information was received after the PPS assertion time"
+                    << std::endl;
+                continue;
+            }
+
+            std::cout
+                << "associated pulse seq=" << pulse.sequence
+                << " with utc=" << pulse_tp.time() << std::endl;
+            auto offset = socket.send(pulse, pulse_tp);
+            std::cout << "sent sample to chrony, offset: " << offset << std::endl;
         }
     }
     else {
