@@ -613,7 +613,7 @@ int main(int argc, char** argv)
         uint64_t last_pulse_sequence = 0;
 
         // Polling thread, reading the Ublox next-pulse information
-        TimingPulseData last_tp;
+        std::optional<TimingPulseData> last_tp;
         std::mutex last_tp_mutex;
         std::thread ublox_timing_polling_thread([&driver, &last_tp, &last_tp_mutex]() {
             try {
@@ -656,7 +656,13 @@ int main(int argc, char** argv)
             TimingPulseData pulse_tp;
             {
                 lock_guard<mutex> guard(last_tp_mutex);
-                pulse_tp = last_tp;
+                if (!last_tp.has_value()) {
+                    std::cout << "No new Ublox time message received since the last pulse"
+                              << std::endl;
+                    continue;
+                }
+                pulse_tp = *last_tp;
+                last_tp = nullopt;
             }
 
             if (pulse_tp.timestamp.isNull()) {
