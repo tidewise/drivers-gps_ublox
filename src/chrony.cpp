@@ -115,13 +115,13 @@ PPS PPS::open(std::string const& path)
         throw std::runtime_error(
             "pps " + path + " does not support capturing the rising edge");
     }
+    if (!(mode & PPS_CANWAIT)) {
+        throw std::runtime_error("need a PPS that has CANWAIT support");
+    }
 
     pps_params_t params;
     if (time_pps_getparams(handle, &params) < 0) {
         throw UnixError("could not query PPS params for " + path);
-    }
-    if (!(params.mode & PPS_CANWAIT)) {
-        throw std::runtime_error("need a PPS that has CANWAIT support");
     }
 
     params.mode |= PPS_CAPTUREASSERT;
