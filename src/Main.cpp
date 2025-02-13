@@ -627,14 +627,23 @@ int main(int argc, char** argv)
                         continue;
                     }
 
+                    std::cout
+                        << "pulse next utc=" << tp.time()
+                        << " received at time=" << tp.timestamp << ", "
+                        << "flags=" << hex << static_cast<int>(tp.flags)
+                        << dec;
+
+                    if (tp.time_of_week.toMilliseconds() % 1000 != 0) {
+                        std::cout << " REJECTED" << std::endl;
+                        continue;
+                    }
+
+
+                    std::cout << " ACCEPTED" << std::endl;
                     {
                         lock_guard<mutex> guard(last_tp_mutex);
                         last_tp = tp;
                     }
-
-                    std::cout
-                        << "pulse next utc=" << tp.time()
-                        << " received at time=" << tp.timestamp << std::endl;
                 }
             }
             catch(std::runtime_error& e) {
