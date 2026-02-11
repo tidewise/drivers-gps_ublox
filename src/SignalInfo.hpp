@@ -1,6 +1,7 @@
 #ifndef GPS_UBLOX_SIGNALINFO_HPP
 #define GPS_UBLOX_SIGNALINFO_HPP
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
